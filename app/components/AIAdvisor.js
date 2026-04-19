@@ -132,7 +132,14 @@ export default function AIAdvisor() {
                 </div>
               ))}
               {loading && (
-                <p className="text-xs text-slate-500 animate-pulse">Yazıyor…</p>
+                <div className="flex justify-start">
+                  <div className="flex max-w-[90%] items-center gap-0.5 rounded-2xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-400">
+                    <span>Yanıt hazırlanıyor</span>
+                    <span className="inline-block animate-bounce">.</span>
+                    <span className="inline-block animate-bounce [animation-delay:0.12s]">.</span>
+                    <span className="inline-block animate-bounce [animation-delay:0.24s]">.</span>
+                  </div>
+                </div>
               )}
               {error && <p className="text-xs text-red-400">{error}</p>}
             </div>
