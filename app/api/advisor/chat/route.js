@@ -1,36 +1,17 @@
+import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { ADVISOR_SYSTEM_PROMPT } from '@/lib/ai-advisor-prompt';
 
 const MAX_USER_CHARS = 4000;
 const MAX_HISTORY = 12;
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
-function resolveProvider() {
+export async function POST(req) {
   const groqKey = process.env.GROQ_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
-  if (groqKey) {
-    return {
-      kind: 'groq',
-      apiKey: groqKey,
-      url: 'https://api.groq.com/openai/v1/chat/completions',
-      model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
-    };
-  }
-  if (openaiKey) {
-    return {
-      kind: 'openai',
-      apiKey: openaiKey,
-      url: 'https://api.openai.com/v1/chat/completions',
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    };
-  }
-  return null;
-}
 
-export async function POST(request) {
-  const provider = resolveProvider();
-  if (!provider) {
+  if (!groqKey && !openaiKey) {
     return NextResponse.json(
       {
         error:
@@ -42,7 +23,7 @@ export async function POST(request) {
 
   let body;
   try {
-    body = await request.json();
+    body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Geçersiz istek gövdesi' }, { status: 400 });
   }
@@ -64,42 +45,40 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Geçerli mesaj yok' }, { status: 400 });
   }
 
-  const payload = {
-    model: provider.model,
-    messages: [{ role: 'system', content: ADVISOR_SYSTEM_PROMPT }, ...messages],
-    max_tokens: 900,
-    temperature: 0.65,
-  };
+  const client = groqKey
+    ? new OpenAI({
+        apiKey: groqKey,
+        baseURL: 'https://api.groq.com/openai/v1',
+      })
+    : new OpenAI({
+        apiKey: openaiKey,
+      });
+
+  const model = groqKey
+    ? process.env.GROQ_MODEL || 'llama3-8b-8192'
+    : process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
   try {
-    const res = await fetch(provider.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${provider.apiKey}`,
-      },
-      body: JSON.stringify(payload),
+    const completion = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'system', content: ADVISOR_SYSTEM_PROMPT }, ...messages],
+      max_tokens: 900,
+      temperature: 0.65,
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      const msg =
-        data?.error?.message ||
-        (typeof data?.error === 'string' ? data.error : null) ||
-        'Model isteği başarısız';
-      console.error(`${provider.kind} error:`, data);
-      return NextResponse.json({ error: msg }, { status: res.status >= 400 && res.status < 600 ? res.status : 502 });
-    }
-
-    const text = data?.choices?.[0]?.message?.content?.trim();
+    const text = completion.choices[0]?.message?.content?.trim();
     if (!text) {
       return NextResponse.json({ error: 'Boş yanıt' }, { status: 502 });
     }
 
     return NextResponse.json({ reply: text });
-  } catch (e) {
-    console.error('advisor chat:', e);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+  } catch (error) {
+    const msg =
+      error?.message ||
+      error?.error?.message ||
+      (typeof error === 'string' ? error : null) ||
+      'Model isteği başarısız';
+    console.error('advisor chat:', error);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
