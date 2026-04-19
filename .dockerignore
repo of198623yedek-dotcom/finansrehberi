@@ -1,0 +1,11 @@
+.git
+.gitignore
+node_modules
+.next
+npm-debug.log
+.env.local
+.DS_Store
+*.pem
+/coverage
+/out
+/build

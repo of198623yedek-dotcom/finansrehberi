@@ -1,0 +1,29 @@
+{
+  "name": "finans-rehberi",
+  "version": "1.0.0",
+  "description": "Borsa, yatırım, kripto para ve finans haberleri sitesi - Google AdSense ile para kazanma",
+  "scripts": {
+    "dev": "next dev -p 3000 -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "deploy": "vercel deploy --prod --yes"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
+    "axios": "^1.6.0",
+    "date-fns": "^2.30.0",
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^3.8.1",
+    "swr": "^2.4.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.50.0",
+    "eslint-config-next": "^14.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.3.0"
+  }
+}
