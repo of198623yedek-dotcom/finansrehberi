@@ -5,6 +5,19 @@ import { ADVISOR_SYSTEM_PROMPT } from '@/lib/ai-advisor-prompt';
 const MAX_USER_CHARS = 4000;
 const MAX_HISTORY = 12;
 
+/** Groq konsolda kaldırılan modeller; env’de kalmış eski değerleri yeni varsayılana çevir */
+const GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+
+function resolveGroqModel(raw) {
+  const m = (raw || GROQ_DEFAULT_MODEL).trim();
+  if (!m) return GROQ_DEFAULT_MODEL;
+  // Tam eşleşme + boşluk/versiyon varyantları + Groq’un kaldırdığı eski id
+  if (m === 'llama3-8b-8192' || m.includes('llama3-8b-8192')) {
+    return GROQ_DEFAULT_MODEL;
+  }
+  return m;
+}
+
 export const runtime = 'edge';
 
 export async function POST(req) {
@@ -54,9 +67,8 @@ export async function POST(req) {
         apiKey: openaiKey,
       });
 
-  const model = groqKey
-    ? process.env.GROQ_MODEL || 'llama3-8b-8192'
-    : process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const groqModel = groqKey ? resolveGroqModel(process.env.GROQ_MODEL) : null;
+  const model = groqKey ? groqModel : process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
   try {
     const completion = await client.chat.completions.create({
