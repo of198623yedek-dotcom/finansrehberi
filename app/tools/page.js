@@ -49,6 +49,14 @@ const ToolsPage = () => {
       href: '/tools/compound',
       features: ['Yapılandırılan Getiri', 'Zaman Analizi', 'Proje Raporları'],
     },
+    {
+      id: 'calculators',
+      icon: '🧮',
+      title: 'Bileşik + Kredi',
+      description: 'Bileşik faiz ve kredi taksiti tek sayfada',
+      href: '/tools/calculators',
+      features: ['Bileşik Faiz', 'Kredi Taksiti', 'Sekmeli Arayüz'],
+    },
   ];
 
   return (
