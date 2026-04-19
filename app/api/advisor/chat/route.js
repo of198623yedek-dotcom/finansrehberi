@@ -9,13 +9,24 @@ const MAX_HISTORY = 12;
 const GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 
 function resolveGroqModel(raw) {
-  const m = (raw || GROQ_DEFAULT_MODEL).trim();
+  let m = String(raw || GROQ_DEFAULT_MODEL).trim();
+  m = m.replace(/^["']|["']$/g, '').trim();
   if (!m) return GROQ_DEFAULT_MODEL;
-  // Tam eşleşme + boşluk/versiyon varyantları + Groq’un kaldırdığı eski id
-  if (m === 'llama3-8b-8192' || m.includes('llama3-8b-8192')) {
+  const lower = m.toLowerCase();
+  // Groq’un kaldırdığı eski id (env’de tırnak/büyük harf farkı olsa da yakala)
+  if (lower === 'llama3-8b-8192' || lower.includes('llama3-8b-8192')) {
     return GROQ_DEFAULT_MODEL;
   }
   return m;
+}
+
+async function groqCompletion(client, model, messages) {
+  return client.chat.completions.create({
+    model,
+    messages: [{ role: 'system', content: ADVISOR_SYSTEM_PROMPT }, ...messages],
+    max_tokens: 900,
+    temperature: 0.65,
+  });
 }
 
 export const runtime = 'edge';
@@ -71,12 +82,17 @@ export async function POST(req) {
   const model = groqKey ? groqModel : process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
   try {
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'system', content: ADVISOR_SYSTEM_PROMPT }, ...messages],
-      max_tokens: 900,
-      temperature: 0.65,
-    });
+    let completion;
+    try {
+      completion = await groqCompletion(client, model, messages);
+    } catch (firstErr) {
+      const code = firstErr?.code ?? firstErr?.error?.code;
+      if (groqKey && code === 'model_decommissioned') {
+        completion = await groqCompletion(client, GROQ_DEFAULT_MODEL, messages);
+      } else {
+        throw firstErr;
+      }
+    }
 
     const text = completion.choices[0]?.message?.content?.trim();
     if (!text) {
