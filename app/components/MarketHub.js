@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import AdSenseBanner from '@/app/components/AdSenseBanner';
+import DailyBrief from '@/app/components/DailyBrief';
 
 const fetcher = (url) =>
   fetch(url).then((r) => {
@@ -245,6 +246,10 @@ export default function MarketHub() {
           <h1 className="text-2xl font-black text-white mb-1">📊 Piyasa Merkezi</h1>
           <p className="text-slate-400 text-sm">Borsa endeksleri, döviz, altın ve kripto canlı takip</p>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-2">
+        <DailyBrief />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
