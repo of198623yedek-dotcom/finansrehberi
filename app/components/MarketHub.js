@@ -89,16 +89,12 @@ function PiyasaRow({ sembol, ad, deger, degisim, yuzde, up, link }) {
       </td>
       <td className="px-4 py-3 text-right font-mono font-semibold text-white text-sm">{deger}</td>
       {degisim && (
-        <td
-          className={`px-4 py-3 text-right font-mono font-semibold text-sm ${up ? 'text-emerald-400' : 'text-red-400'}`}
-        >
+        <td className={`px-4 py-3 text-right font-mono font-semibold text-sm ${up ? 'text-emerald-400' : 'text-red-400'}`}>
           {degisim}
         </td>
       )}
       {yuzde && (
-        <td
-          className={`px-4 py-3 text-right font-mono font-bold text-sm ${up ? 'text-emerald-400' : 'text-red-400'}`}
-        >
+        <td className={`px-4 py-3 text-right font-mono font-bold text-sm ${up ? 'text-emerald-400' : 'text-red-400'}`}>
           <span className={`px-2 py-0.5 rounded ${up ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>{yuzde}</span>
         </td>
       )}
@@ -122,7 +118,6 @@ function Tab({ aktif, onClick, children }) {
   );
 }
 
-/** Ana sayfa ve /market — Piyasa Merkezi (koyu tema, SWR, AdSense) */
 export default function MarketHub() {
   const [aktifSekme, setAktifSekme] = useState('endeks');
   const [saat, setSaat] = useState('');
@@ -210,8 +205,6 @@ export default function MarketHub() {
       }))
     : DOVIZ_FALLBACK;
 
-  const tickerRows = dovizData && dovizler.length > 0 ? dovizler.slice(0, 4) : DOVIZ_FALLBACK.slice(0, 4);
-
   const newsList = Array.isArray(newsData) ? newsData : [];
   const haberler =
     newsList.length > 0
@@ -237,7 +230,7 @@ export default function MarketHub() {
             {saat && <span className="text-xs text-slate-500 font-mono">{saat}</span>}
           </div>
           <div className="hidden md:flex items-center gap-6 text-xs font-mono">
-            {tickerRows.map((d) => (
+            {DOVIZ_FALLBACK.slice(0, 4).map((d) => (
               <span key={d.sembol} className="text-slate-400">
                 {d.sembol} <span className="text-white font-bold">{d.deger}</span>{' '}
                 <span className={d.up ? 'text-emerald-400' : 'text-red-400'}>{d.degisim}</span>
@@ -251,24 +244,8 @@ export default function MarketHub() {
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-black text-white mb-1">📊 Piyasa Merkezi</h1>
           <p className="text-slate-400 text-sm">Borsa endeksleri, döviz, altın ve kripto canlı takip</p>
-          <p className="mt-2 text-[11px] text-slate-600 font-mono" data-build="market-hub-v2">
-            Sekmeler: Endeksler · Döviz · Kripto · Hareketler — arayüz market-hub-v2
-          </p>
         </div>
       </div>
-
-      {process.env.NODE_ENV === 'development' && (
-        <div
-          className="fixed bottom-3 right-3 z-[100] max-w-[16rem] rounded-lg border border-blue-500/50 bg-blue-950/95 px-3 py-2 text-[11px] font-mono text-blue-100 shadow-xl"
-          role="status"
-        >
-          <span className="font-bold text-blue-300">Yerel geliştirme</span>
-          <br />
-          Bu rozeti görüyorsanız doğru klasörden <code className="text-white">npm run dev</code> çalışıyor.
-          <br />
-          Adres: <code className="text-emerald-300">http://127.0.0.1:3000</code>
-        </div>
-      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <AdSenseBanner slot="hero-bottom" format="leaderboard" label="Reklam" />
@@ -310,9 +287,7 @@ export default function MarketHub() {
                       ))}
                     </tbody>
                   </table>
-                  <div className="px-4 py-2 text-xs text-slate-600">
-                    Veriler SWR cache ile 5 dakikada bir güncellenir
-                  </div>
+                  <div className="px-4 py-2 text-xs text-slate-600">Veriler SWR cache ile 5 dakikada bir güncellenir</div>
                 </div>
               )}
 
