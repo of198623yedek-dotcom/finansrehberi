@@ -420,7 +420,16 @@ export default function MarketHub() {
             <AdSenseBanner slot="in-content-1" label="Reklam" />
 
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-              <h2 className="font-bold text-white mb-4 text-sm">⚡ Hızlı Araçlar</h2>
+              <h2 className="font-bold text-white mb-4 text-sm flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shadow-sm"
+                >
+                  FR
+                </span>
+                <span aria-hidden="true">⚡</span>
+                <span>Hızlı Araçlar</span>
+              </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
                   { icon: '🎯', ad: 'Tavan Serisi', link: '/tools/ceiling' },
