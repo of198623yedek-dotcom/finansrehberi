@@ -5,6 +5,9 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { getAssetBySlug, ASSET_SLUGS } from '@/lib/assets-data';
 
 const fetcher = (url) => fetch(url).then((r) => r.json());
