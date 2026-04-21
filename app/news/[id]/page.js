@@ -44,7 +44,7 @@ export default async function NewsDetailPage({ params }) {
         </Link>
 
         {/* Content Header */}
-        <article className="glass-morphism rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
+        <article className="bg-slate-900/60 backdrop-blur-2xl rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
           {/* Header Image / Gradient Area */}
           <div className="h-48 md:h-64 w-full bg-gradient-to-br from-blue-900/40 via-slate-800/20 to-purple-900/40 relative">
             <div className="absolute inset-0 flex items-center justify-center">
@@ -108,7 +108,7 @@ export default async function NewsDetailPage({ params }) {
 
         {/* Related Assets Suggestion */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="glass-morphism p-6 rounded-2xl border border-slate-800/50">
+          <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-800/50">
             <h4 className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-widest">İlgili Varlıklar</h4>
             <div className="flex flex-wrap gap-2">
               {['BIST100', 'USD/TRY', 'ALTIN'].map(asset => (
@@ -118,7 +118,7 @@ export default async function NewsDetailPage({ params }) {
               ))}
             </div>
           </div>
-          <div className="glass-morphism p-6 rounded-2xl border border-slate-800/50 flex flex-col justify-center">
+          <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-800/50 flex flex-col justify-center">
             <p className="text-sm text-slate-400">Daha fazla analiz için AI Danışman'a soru sorabilirsiniz.</p>
             <button className="mt-3 text-blue-400 text-sm font-bold hover:underline flex items-center gap-1">
               AI Danışmanı Başlat <span>→</span>
@@ -128,14 +128,6 @@ export default async function NewsDetailPage({ params }) {
       </main>
 
       <Footer />
-      
-      <style jsx>{`
-        .glass-morphism {
-          background: rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-        }
-      `}</style>
     </div>
   );
 }
