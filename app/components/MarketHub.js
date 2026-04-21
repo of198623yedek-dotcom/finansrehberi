@@ -319,7 +319,21 @@ export default function MarketHub() {
                       <table className="w-full">
                         <tbody>
                           {yukselenler.map((s, i) => (
-                            <PiyasaRow key={i} {...s} sembol={s.symbol} up={true} onClick={() => handleAssetClick({...s, sembol: s.symbol, up: true})} />
+                            <PiyasaRow 
+                              key={i} 
+                              sembol={s.symbol || s.sembol} 
+                              ad={s.name || s.ad}
+                              deger={s.last_price || s.deger || s.value}
+                              degisim={s.change_percent || s.degisim || s.yuzde}
+                              up={true} 
+                              onClick={() => handleAssetClick({
+                                sembol: s.symbol || s.sembol,
+                                ad: s.name || s.ad,
+                                deger: s.last_price || s.deger || s.value,
+                                degisim: s.change_percent || s.degisim || s.yuzde,
+                                up: true
+                              })} 
+                            />
                           ))}
                         </tbody>
                       </table>
@@ -332,7 +346,21 @@ export default function MarketHub() {
                       <table className="w-full">
                         <tbody>
                           {dusenler.map((s, i) => (
-                            <PiyasaRow key={i} {...s} sembol={s.symbol} up={false} onClick={() => handleAssetClick({...s, sembol: s.symbol, up: false})} />
+                            <PiyasaRow 
+                              key={i} 
+                              sembol={s.symbol || s.sembol} 
+                              ad={s.name || s.ad}
+                              deger={s.last_price || s.deger || s.value}
+                              degisim={s.change_percent || s.degisim || s.yuzde}
+                              up={false} 
+                              onClick={() => handleAssetClick({
+                                sembol: s.symbol || s.sembol,
+                                ad: s.name || s.ad,
+                                deger: s.last_price || s.deger || s.value,
+                                degisim: s.change_percent || s.degisim || s.yuzde,
+                                up: false
+                              })} 
+                            />
                           ))}
                         </tbody>
                       </table>
