@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 const fetcher = (url) => fetch(url).then((r) => (r.ok ? r.json() : null));
 
-/** Günlük piyasa özeti — Modernize edilmiş ve zenginleştirilmiş sürüm */
+/** Günlük piyasa özeti — Premium Visual Version */
 export default function DailyBrief() {
   const date = new Date().toLocaleDateString('tr-TR', {
     weekday: 'long',
@@ -52,7 +52,7 @@ export default function DailyBrief() {
     : '+0.45%';
   const altinUp = altinRaw?.changePercent != null ? altinRaw.changePercent >= 0 : true;
 
-  // Piyasa Duyarlılığı Hesaplama (Basit mantık)
+  // Piyasa Duyarlılığı Hesaplama
   const positiveCount = [dolarUp, bistUp, altinUp].filter(Boolean).length;
   const sentiment = positiveCount >= 2 ? 'Pozitif / İyimser' : 'Temkinli / Karışık';
   const sentimentColor = positiveCount >= 2 ? 'text-emerald-400' : 'text-yellow-400';
@@ -60,39 +60,39 @@ export default function DailyBrief() {
   return (
     <div className="relative group overflow-hidden">
       {/* Background Glow Effect */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+      <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur opacity-10 group-hover:opacity-30 transition duration-1000"></div>
       
-      <div className="relative bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-2xl">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-xl">
+      <div className="relative bg-slate-950/40 backdrop-blur-2xl border border-white/5 rounded-[32px] p-8 shadow-2xl">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl border border-white/10 shadow-lg">
               📊
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Günün Özeti</h3>
-              <p className="text-[10px] text-slate-500 font-medium">{date}</p>
+              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Günün Özeti</h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">{date}</p>
             </div>
           </div>
           <div className="flex flex-col items-end">
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${sentimentColor}`}>
+            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${sentimentColor}`}>
               {sentiment}
             </span>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-              <span className="text-[10px] text-slate-400 font-mono">LIVE FEED</span>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+              <span className="text-[9px] text-slate-500 font-black tracking-widest uppercase">Live Hub</span>
             </div>
           </div>
         </div>
 
         {/* Highlight Text */}
-        <div className="bg-slate-800/40 border-l-2 border-blue-500 p-3 rounded-r-lg mb-6">
-          <p className="text-blue-200/90 text-xs leading-relaxed font-medium">
+        <div className="bg-white/5 border-l-4 border-blue-600 p-5 rounded-r-2xl mb-8 backdrop-blur-sm">
+          <p className="text-blue-200/90 text-sm leading-relaxed font-semibold">
             Küresel piyasalarda gözler enflasyon verilerinde. Borsa İstanbul, bankacılık öncülüğünde güç kazanırken, emtia piyasalarında hareketlilik artıyor.
           </p>
         </div>
 
         {/* Data Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <BriefItem 
             label="BIST 100" 
             value={bistDeger} 
@@ -116,12 +116,12 @@ export default function DailyBrief() {
           />
         </div>
 
-        <div className="mt-6 pt-5 border-t border-slate-800 flex items-center justify-between">
-          <Link href="/market" className="text-[11px] font-bold text-blue-400 hover:text-blue-300 transition flex items-center gap-1">
-            TÜM PİYASALARI GÖR <span>→</span>
+        <div className="mt-10 pt-6 border-t border-white/5 flex items-center justify-between">
+          <Link href="/market" className="text-[10px] font-black text-blue-500 hover:text-white transition-all uppercase tracking-[0.2em] flex items-center gap-2">
+            TERMİNAL <span>→</span>
           </Link>
-          <span className="text-[10px] text-slate-600 flex items-center gap-1">
-            <span className="opacity-50">🛡️</span> YATIRIM TAVSİYESİ DEĞİLDİR
+          <span className="text-[9px] text-slate-600 font-bold flex items-center gap-2 uppercase tracking-tighter">
+            <span className="opacity-50">🛡️</span> NO ADVICE
           </span>
         </div>
       </div>
@@ -131,14 +131,14 @@ export default function DailyBrief() {
 
 function BriefItem({ label, value, change, isUp, icon }) {
   return (
-    <div className="bg-slate-800/30 hover:bg-slate-800/50 border border-slate-700/30 rounded-xl p-3 transition-all">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs opacity-70">{icon}</span>
-        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{label}</span>
+    <div className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-4 transition-all duration-300 group/item">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-sm opacity-60 group-hover/item:scale-110 transition-transform">{icon}</span>
+        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{label}</span>
       </div>
-      <div className="flex items-baseline justify-between gap-1">
-        <span className="text-sm font-mono font-bold text-white tracking-tight">{value}</span>
-        <span className={`text-[10px] font-mono font-bold ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-base font-mono font-black text-white tracking-tighter">{value}</span>
+        <span className={`text-[10px] font-mono font-black ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
           {isUp ? '▲' : '▼'} {change.replace('+', '').replace('-', '')}
         </span>
       </div>

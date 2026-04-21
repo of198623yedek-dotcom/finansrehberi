@@ -1,218 +1,165 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { isAuthenticated, profile, logout } = useAuth();
 
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-50 backdrop-blur bg-slate-900/80 border-b border-slate-700/50">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-20">
+    <header className={`sticky top-0 z-[100] transition-all duration-500 ${
+      scrolled ? 'bg-slate-950/70 backdrop-blur-2xl py-3 border-b border-white/5' : 'bg-transparent py-5'
+    }`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-14">
           
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center font-bold text-white group-hover:shadow-lg group-hover:shadow-blue-500/50 transition-all">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-white shadow-xl shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500 border border-white/20">
               FR
             </div>
-            <span className="font-bold text-lg hidden sm:inline text-white">FinansRehberi</span>
+            <div className="flex flex-col">
+              <span className="font-black text-xl tracking-tighter text-white leading-none">FinansRehberi</span>
+              <span className="text-[9px] font-black text-blue-500 tracking-[0.2em] uppercase leading-none mt-1">PRO TERMINAL</span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link 
-              href="/market" 
-              className="text-slate-300 hover:text-white font-medium transition relative group"
-            >
-              Pazar
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></span>
-            </Link>
+          <nav className="hidden lg:flex items-center gap-8">
+            <NavLink href="/market">Piyasa</NavLink>
+            <NavLink href="/halka-arz">Halka Arz</NavLink>
             
-            <Link 
-              href="/halka-arz" 
-              className="text-slate-300 hover:text-white font-medium transition relative group"
-            >
-              Halka Arz
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></span>
-            </Link>
+            {/* Varlıklar Dropdown */}
+            <Dropdown label="Varlıklar">
+              <DropdownLink href="/assets/altin">💰 Altın (Gold)</DropdownLink>
+              <DropdownLink href="/assets/usd-try">💵 USD/TRY</DropdownLink>
+              <DropdownLink href="/assets/bitcoin">₿ Bitcoin</DropdownLink>
+              <DropdownLink href="/assets/ethereum">Ξ Ethereum</DropdownLink>
+              <DropdownLink href="/assets/bist-100">📊 BIST 100</DropdownLink>
+            </Dropdown>
             
-            {/* Dropdown: Varlıklar */}
-            <div className="relative group">
-              <button className="text-slate-300 hover:text-white font-medium transition relative">
-                Varlıklar ↓
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></span>
-              </button>
-              <div className="absolute left-0 mt-2 w-56 bg-slate-800/95 backdrop-blur border border-slate-700 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl">
-                <Link href="/assets/altin" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white font-medium">
-                  💰 Altın (Gold)
-                </Link>
-                <Link href="/assets/gumush" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                  🥈 Gümüş (Silver)
-                </Link>
-                <Link href="/assets/usd-try" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                  💵 USD/TRY
-                </Link>
-                <Link href="/assets/eur-try" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                  💶 EUR/TRY
-                </Link>
-                <Link href="/assets/bitcoin" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                  ₿ Bitcoin
-                </Link>
-                <Link href="/assets/ethereum" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                  Ξ Ethereum
-                </Link>
-                <Link href="/assets/xrp" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                  XRP (Ripple)
-                </Link>
-                <Link href="/assets/solana" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                  ◎ Solana
-                </Link>
-                <Link href="/assets/bist-100" className="block px-4 py-3 hover:bg-blue-600/20 text-slate-300 hover:text-white">
-                  📊 BIST 100
-                </Link>
-              </div>
-            </div>
-            
-            {/* Dropdown: Araçlar */}
-            <div className="relative group">
-              <button className="text-slate-300 hover:text-white font-medium transition relative">
-                Araçlar ↓
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></span>
-              </button>
-              <div className="absolute left-0 mt-2 w-52 bg-slate-800/95 backdrop-blur border border-slate-700 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl">
-                <Link href="/tools/ceiling" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white font-medium">
-                  🎯 Tavan Serisi
-                </Link>
-                <Link href="/tools/profit" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                  💰 Kar Hesapla
-                </Link>
-                <Link href="/tools/lot" className="block px-4 py-3 hover:bg-blue-600/20 text-slate-300 hover:text-white">
-                  📊 Lot Hesapla
-                </Link>
-              </div>
-            </div>
+            {/* Araçlar Dropdown */}
+            <Dropdown label="Araçlar">
+              <DropdownLink href="/tools/ceiling">🎯 Tavan Serisi</DropdownLink>
+              <DropdownLink href="/tools/profit">💰 Kar Hesapla</DropdownLink>
+              <DropdownLink href="/tools/lot">📊 Lot Hesapla</DropdownLink>
+            </Dropdown>
 
-            <Link 
-              href="/blog" 
-              className="text-slate-300 hover:text-white font-medium transition relative group"
-            >
-              Blog
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></span>
-            </Link>
-            <Link 
-              href="/guides" 
-              className="text-slate-300 hover:text-white font-medium transition relative group"
-            >
-              Rehberler
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></span>
-            </Link>
+            <NavLink href="/blog">Haberler</NavLink>
+            <NavLink href="/guides">Rehberler</NavLink>
 
-            {/* 🆕 Auth Buttons */}
+            <div className="h-6 w-px bg-white/10 mx-2"></div>
+
             {isAuthenticated ? (
-              <div className="relative group">
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium">
-                  👤 {profile?.full_name?.split(' ')[0] || 'Profil'}
+              <Dropdown label={profile?.full_name?.split(' ')[0] || 'Hesabım'}>
+                <DropdownLink href="/dashboard">📊 Kontrol Paneli</DropdownLink>
+                <button onClick={logout} className="w-full text-left px-5 py-3 hover:bg-red-500/10 text-slate-300 hover:text-red-400 text-xs font-bold transition-colors">
+                  🚪 Çıkış
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-slate-800/95 backdrop-blur border border-slate-700 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl">
-                  <Link href="/dashboard" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
-                    📊 Kontrol Paneli
-                  </Link>
-                  <button
-                    onClick={logout}
-                    className="w-full text-left px-4 py-3 hover:bg-red-600/20 text-slate-300 hover:text-white"
-                  >
-                    🚪 Çıkış
-                  </button>
-                </div>
-              </div>
+              </Dropdown>
             ) : (
               <Link 
                 href="/auth" 
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium"
+                className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
               >
-                Giriş / Kayıt
+                Giriş Yap
               </Link>
             )}
-            <Link href="/market" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium transition shadow-lg hover:shadow-blue-500/50">
-              Başla
+            
+            <Link href="/market" className="bg-white text-black px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all shadow-xl hover:shadow-blue-500/40">
+              BAŞLA
             </Link>
           </nav>
 
           {/* Mobile Menu Button */}
           <button 
-            className="md:hidden p-2 hover:bg-slate-800 rounded-lg transition"
+            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 transition-all active:scale-95"
             onClick={() => setIsOpen(!isOpen)}
           >
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-            </svg>
+            <div className="flex flex-col gap-1.5">
+              <span className={`w-5 h-0.5 bg-white transition-all ${isOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+              <span className={`w-5 h-0.5 bg-white transition-all ${isOpen ? 'opacity-0' : ''}`}></span>
+              <span className={`w-5 h-0.5 bg-white transition-all ${isOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+            </div>
           </button>
         </div>
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <nav className="md:hidden border-t border-slate-700 pb-4 space-y-3">
-            <Link 
-              href="/market" 
-              className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition font-medium"
-            >
-              Pazar
-            </Link>
-            <Link 
-              href="/halka-arz" 
-              className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition font-medium"
-            >
-              Halka Arz
-            </Link>
-            <div className="px-4">
-              <p className="text-slate-400 text-sm font-semibold mb-2">Varlıklar</p>
-              <div className="space-y-2 ml-4">
-                <Link href="/assets/altin" className="block text-slate-300 hover:text-white text-sm">
-                  💰 Altın
-                </Link>
-                <Link href="/assets/usd-try" className="block text-slate-300 hover:text-white text-sm">
-                  💵 USD/TRY
-                </Link>
-                <Link href="/assets/bitcoin" className="block text-slate-300 hover:text-white text-sm">
-                  ₿ Bitcoin
-                </Link>
-                <Link href="/assets/ethereum" className="block text-slate-300 hover:text-white text-sm">
-                  Ξ Ethereum
-                </Link>
-                <Link href="/assets/bist-100" className="block text-slate-300 hover:text-white text-sm">
-                  📊 BIST 100
-                </Link>
+          <div className="lg:hidden mt-4 pb-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="grid grid-cols-2 gap-3">
+              <MobileLink href="/market" label="Piyasa" />
+              <MobileLink href="/halka-arz" label="Halka Arz" />
+              <MobileLink href="/blog" label="Haberler" />
+              <MobileLink href="/guides" label="Rehberler" />
+            </div>
+            
+            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Popüler Varlıklar</p>
+              <div className="grid grid-cols-2 gap-4">
+                <Link href="/assets/altin" className="text-xs font-bold text-slate-300">💰 Altın</Link>
+                <Link href="/assets/bitcoin" className="text-xs font-bold text-slate-300">₿ Bitcoin</Link>
+                <Link href="/assets/usd-try" className="text-xs font-bold text-slate-300">💵 USD/TRY</Link>
+                <Link href="/assets/bist-100" className="text-xs font-bold text-slate-300">📊 BIST 100</Link>
               </div>
             </div>
-            <div className="px-4">
-              <p className="text-slate-400 text-sm font-semibold mb-2">Araçlar</p>
-              <div className="space-y-2 ml-4">
-                <Link href="/tools/ceiling" className="block text-slate-300 hover:text-white text-sm">🎯 Tavan Serisi</Link>
-                <Link href="/tools/profit" className="block text-slate-300 hover:text-white text-sm">💰 Kar Hesapla</Link>
-                <Link href="/tools/lot" className="block text-slate-300 hover:text-white text-sm">📊 Lot Hesapla</Link>
-              </div>
-            </div>
-            <Link 
-              href="/blog" 
-              className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition"
-            >
-              Blog
+
+            <Link href="/market" className="block w-full py-4 bg-blue-600 text-white text-center rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-blue-600/20">
+              HEMEN BAŞLA
             </Link>
-            <Link 
-              href="/guides" 
-              className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition"
-            >
-              Rehberler
-            </Link>
-            <Link href="/market" className="block mx-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium transition">
-              Başla
-            </Link>
-          </nav>
+          </div>
         )}
       </div>
     </header>
+  );
+}
+
+function NavLink({ href, children }) {
+  return (
+    <Link 
+      href={href} 
+      className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all relative group"
+    >
+      {children}
+      <span className="absolute -bottom-1.5 left-0 w-0 h-0.5 bg-blue-500 rounded-full group-hover:w-full transition-all duration-300"></span>
+    </Link>
+  );
+}
+
+function Dropdown({ label, children }) {
+  return (
+    <div className="relative group">
+      <button className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white transition-all flex items-center gap-1.5">
+        {label} <span className="text-[8px] opacity-50 group-hover:rotate-180 transition-transform duration-300">▼</span>
+      </button>
+      <div className="absolute left-0 mt-4 w-56 bg-slate-950/90 backdrop-blur-3xl border border-white/10 rounded-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 shadow-2xl overflow-hidden scale-95 group-hover:scale-100 origin-top-left">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DropdownLink({ href, children }) {
+  return (
+    <Link href={href} className="block px-5 py-3 hover:bg-white/5 border-b border-white/5 text-slate-300 hover:text-white text-xs font-bold transition-colors">
+      {children}
+    </Link>
+  );
+}
+
+function MobileLink({ href, label }) {
+  return (
+    <Link href={href} className="bg-white/5 border border-white/5 p-4 rounded-xl text-center text-[10px] font-black uppercase tracking-widest text-slate-300 active:bg-blue-600 active:text-white transition-all">
+      {label}
+    </Link>
   );
 }

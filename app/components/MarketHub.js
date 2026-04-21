@@ -1,70 +1,42 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import useSWR from 'swr';
-import AdSenseBanner from '@/app/components/AdSenseBanner';
-import DailyBrief from '@/app/components/DailyBrief';
-import FinancialChart from '@/app/components/FinancialChart';
-import { BLOG_ARTICLES } from '@/lib/blog-data';
+import DailyBrief from './DailyBrief';
+import AdSenseBanner from './AdSenseBanner';
+import FinancialChart from './FinancialChart';
 
-const fetcher = (url) =>
-  fetch(url).then((r) => {
-    if (!r.ok) throw new Error('API Error');
-    return r.json();
-  });
+const fetcher = (url) => fetch(url).then((r) => r.json());
 
-// ─── Fallback Veri ──────────────────────────────────────────────────────────
+const HABERLER_FALLBACK = [
+  { kategori: 'BORSA', baslik: 'BIST 100 Endeksi Güne Pozitif Başladı', sure: '5 dk' },
+  { kategori: 'EKONOMİ', baslik: 'Merkez Bankası Rezervlerinde Artış Sürüyor', sure: '12 dk' },
+  { kategori: 'DÖVİZ', baslik: 'Dolar/TL 44.55 Seviyesinde Yatay Seyrediyor', sure: '25 dk' },
+];
+
 const ENDEKS_FALLBACK = [
-  { sembol: 'XU100', ad: 'BIST 100', deger: '13.674', degisim: '+137.26', yuzde: '+1.01%', up: true },
-  { sembol: 'XU050', ad: 'BIST 50', deger: '12.307', degisim: '+138.34', yuzde: '+1.14%', up: true },
-  { sembol: 'XU030', ad: 'BIST 30', deger: '13.200', degisim: '+680.15', yuzde: '+5.42%', up: true },
-  { sembol: 'XBANK', ad: 'BANKA', deger: '17.288', degisim: '+1.393', yuzde: '+8.76%', up: true },
+  { sembol: 'XU100', ad: 'BIST 100', deger: '13.674', degisim: '+1.01', up: true },
+  { sembol: 'XU030', ad: 'BIST 30', deger: '14.820', degisim: '+0.85', up: true },
+  { sembol: 'XBANK', ad: 'BANKA', deger: '17.288', degisim: '+2.15', up: true },
 ];
 
 const DOVIZ_FALLBACK = [
-  { sembol: 'USD/TRY', deger: '44.50', degisim: '-0.23', up: false },
-  { sembol: 'EUR/TRY', deger: '52.03', degisim: '+0.60', up: true },
-  { sembol: 'GBP/TRY', deger: '56.85', degisim: '+0.45', up: true },
-  { sembol: 'CHF/TRY', deger: '48.23', degisim: '-0.15', up: false },
-  { sembol: 'EUR/USD', deger: '1.1693', degisim: '+0.01', up: true },
+  { sembol: 'USD/TRY', deger: '44.5507', degisim: '-0.21', up: false },
+  { sembol: 'EUR/TRY', deger: '52.0308', degisim: '+0.45', up: true },
 ];
 
 const KRIPTO_FALLBACK = [
-  { sembol: 'BTC', ad: 'Bitcoin', deger: '$84.200', degisim: '+2.34%', up: true },
-  { sembol: 'ETH', ad: 'Ethereum', deger: '$3.542', degisim: '+1.12%', up: true },
-  { sembol: 'XRP', ad: 'XRP', deger: '$2.45', degisim: '+1.85%', up: true },
-  { sembol: 'SOL', ad: 'Solana', deger: '$182.5', degisim: '+4.42%', up: true },
-  { sembol: 'BNB', ad: 'BNB', deger: '$612', degisim: '+3.61%', up: true },
+  { sembol: 'BTC/USD', ad: 'Bitcoin', deger: '103.450', degisim: '-%1.45', up: false },
+  { sembol: 'ETH/USD', ad: 'Ethereum', deger: '3.840', degisim: '+%0.25', up: true },
 ];
 
-const HABERLER_FALLBACK = [
-  { kategori: 'BORSA', baslik: "BIST 100'de Güçlü Yükseliş: Endeks 13.674 Puanı Gördü", sure: '15 dk önce' },
-  { kategori: 'KRİPTO', baslik: 'Bitcoin Kurumsal Alımlarla Yeni Zirveye Yaklaştı', sure: '1 saat önce' },
-  { kategori: 'ALTIN', baslik: "Gram Altın 6.756 TL'den İşlem Gördü, ONS 2.756$", sure: '2 saat önce' },
-  { kategori: 'EKONOMİ', baslik: 'Merkez Bankası Faiz Kararını Bu Hafta Açıklayacak', sure: '3 saat önce' },
-  { kategori: 'DÖVİZ', baslik: 'Dolar/TL 44.50 Seviyesinde — Günlük Hareket Sınırlı Kaldı', sure: '4 saat önce' },
-  { kategori: 'BORSA', baslik: 'Banka Endeksi %8.76 ile Haftanın En Güçlü Endeksi Oldu', sure: '5 saat önce' },
-];
-
-const KAT_RENK = {
-  BORSA: 'bg-blue-500/20 text-blue-300',
-  KRİPTO: 'bg-orange-500/20 text-orange-300',
-  ALTIN: 'bg-yellow-500/20 text-yellow-300',
-  EKONOMİ: 'bg-green-500/20 text-green-300',
-  DÖVİZ: 'bg-purple-500/20 text-purple-300',
-};
-
-function newsRelativeTime(iso) {
-  if (!iso) return '';
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 1) return 'Az önce';
-  if (m < 60) return `${m} dk önce`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} saat önce`;
-  const d = Math.floor(h / 24);
-  return `${d} gün önce`;
+function newsRelativeTime(dateStr) {
+  if (!dateStr) return 'Az önce';
+  const d = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (d < 60) return `${d} dk`;
+  return `${Math.floor(d / 60)} sa`;
 }
 
 function PiyasaRow({ sembol, ad, deger, degisim, yuzde, up, link, onClick }) {
@@ -79,39 +51,40 @@ function PiyasaRow({ sembol, ad, deger, degisim, yuzde, up, link, onClick }) {
   return (
     <tr
       onClick={handleClick}
-      className="border-b border-slate-800 hover:bg-slate-800/50 transition cursor-pointer"
+      className="group border-b border-white/5 hover:bg-white/5 transition-all duration-300 cursor-pointer"
     >
-      <td className="px-4 py-3">
-        <div className="font-mono font-bold text-white text-sm">{sembol}</div>
-        {ad && <div className="text-xs text-slate-500">{ad}</div>}
+      <td className="px-6 py-4">
+        <div className="font-mono font-black text-white text-sm tracking-tight group-hover:text-blue-400 transition-colors">{sembol}</div>
+        {ad && <div className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{ad}</div>}
       </td>
-      <td className="px-4 py-3 text-right font-mono font-semibold text-white text-sm">{deger}</td>
-      {degisim && (
-        <td className={`px-4 py-3 text-right font-mono font-semibold text-sm ${up ? 'text-emerald-400' : 'text-red-400'}`}>
-          {degisim}
-        </td>
-      )}
-      {yuzde && (
-        <td className={`px-4 py-3 text-right font-mono font-bold text-sm ${up ? 'text-emerald-400' : 'text-red-400'}`}>
-          <span className={`px-2 py-0.5 rounded ${up ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>{yuzde}</span>
-        </td>
-      )}
+      <td className="px-6 py-4 text-right">
+        <span className="font-mono font-black text-white text-sm">{deger}</span>
+      </td>
+      <td className="px-6 py-4 text-right">
+        <span className={`px-2 py-1 rounded-md text-[11px] font-mono font-black ${
+          up ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+        }`}>
+          {degisim && (up ? '▲ ' : '▼ ')}
+          {degisim?.toString().replace('-', '').replace('+', '')}
+          {yuzde ? ` (${yuzde})` : ''}
+        </span>
+      </td>
     </tr>
   );
 }
 
-function Tab({ aktif, onClick, children }) {
+function Tab({ children, aktif, onClick }) {
   return (
     <button
-      type="button"
       onClick={onClick}
-      className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-        aktif
-          ? 'border-blue-500 text-blue-400'
-          : 'border-transparent text-slate-400 hover:text-slate-200'
+      className={`px-8 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all relative shrink-0 ${
+        aktif ? 'text-white' : 'text-slate-500 hover:text-slate-300'
       }`}
     >
       {children}
+      {aktif && (
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-500 rounded-t-full shadow-[0_0_15px_rgba(59,130,246,0.8)]"></div>
+      )}
     </button>
   );
 }
@@ -119,231 +92,143 @@ function Tab({ aktif, onClick, children }) {
 export default function MarketHub() {
   const [aktifSekme, setAktifSekme] = useState('endeks');
   const [saat, setSaat] = useState('');
-
-  useEffect(() => {
-    const tick = () =>
-      setSaat(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const { data: bistData } = useSWR('/api/markets/bist', fetcher, {
-    revalidateOnFocus: false,
-    refreshInterval: 300000,
-    keepPreviousData: true,
-  });
-  const { data: dovizData } = useSWR('/api/markets/doviz', fetcher, {
-    revalidateOnFocus: false,
-    refreshInterval: 300000,
-    keepPreviousData: true,
-  });
-  const { data: gainers } = useSWR('/api/markets/gainers', fetcher, {
-    revalidateOnFocus: false,
-    refreshInterval: 300000,
-    keepPreviousData: true,
-  });
-  const { data: losers } = useSWR('/api/markets/losers', fetcher, {
-    revalidateOnFocus: false,
-    refreshInterval: 300000,
-    keepPreviousData: true,
-  });
-  const { data: newsData } = useSWR('/api/markets/news', fetcher, {
-    revalidateOnFocus: false,
-    refreshInterval: 600000,
-    keepPreviousData: true,
-  });
-
-  const bist = bistData?.bist ?? bistData;
-
-  const endeksler = bist?.xu100
-    ? [
-        bist.xu100 && {
-          sembol: 'XU100',
-          ad: 'BIST 100',
-          deger: bist.xu100.value?.toFixed(0),
-          degisim: bist.xu100.change?.toFixed(2),
-          yuzde: `${bist.xu100.changePercent >= 0 ? '+' : ''}${bist.xu100.changePercent?.toFixed(2)}%`,
-          up: bist.xu100.changePercent >= 0,
-          link: '/assets/bist-100',
-        },
-        bist.xu050 && {
-          sembol: 'XU050',
-          ad: 'BIST 50',
-          deger: bist.xu050.value?.toFixed(0),
-          degisim: bist.xu050.change?.toFixed(2),
-          yuzde: `${bist.xu050.changePercent >= 0 ? '+' : ''}${bist.xu050.changePercent?.toFixed(2)}%`,
-          up: bist.xu050.changePercent >= 0,
-        },
-        bist.xu030 && {
-          sembol: 'XU030',
-          ad: 'BIST 30',
-          deger: bist.xu030.value?.toFixed(0),
-          degisim: bist.xu030.change?.toFixed(2),
-          yuzde: `${bist.xu030.changePercent >= 0 ? '+' : ''}${bist.xu030.changePercent?.toFixed(2)}%`,
-          up: bist.xu030.changePercent >= 0,
-        },
-        bist.xbank && {
-          sembol: 'XBANK',
-          ad: 'BANKA',
-          deger: bist.xbank.value?.toFixed(0),
-          degisim: bist.xbank.change?.toFixed(2),
-          yuzde: `${bist.xbank.changePercent >= 0 ? '+' : ''}${bist.xbank.changePercent?.toFixed(2)}%`,
-          up: bist.xbank.changePercent >= 0,
-        },
-      ].filter(Boolean)
-    : ENDEKS_FALLBACK;
-
-  const dovizler = dovizData
-    ? Object.values(dovizData).map((d) => ({
-        sembol: d.symbol,
-        deger: typeof d.value === 'number' ? d.value.toFixed(4) : d.value,
-        degisim: d.change?.toFixed(2),
-        up: (d.change || 0) >= 0,
-      }))
-    : DOVIZ_FALLBACK;
-
-  const newsList = Array.isArray(newsData) ? newsData : [];
-  const haberler =
-    newsList.length > 0
-      ? newsList.slice(0, 10).map((h) => ({
-          id: h.id,
-          kategori: h.category || 'BORSA',
-          baslik: h.title,
-          sure: newsRelativeTime(h.publishedAt),
-        }))
-      : HABERLER_FALLBACK;
-
-  // States moved here to avoid Temporal Dead Zone (TDZ)
-  const [newsPaused, setNewsPaused] = useState(false);
-  const [lastActiveIndex, setLastActiveIndex] = useState(0);
   const [selectedAsset, setSelectedAsset] = useState(null);
 
+  const { data: newsData } = useSWR('/api/markets/news', fetcher);
+  const { data: dovizData } = useSWR('/api/markets/doviz', fetcher);
+  const { data: bistData } = useSWR('/api/markets/bist', fetcher);
+  const { data: gainers } = useSWR('/api/markets/gainers', fetcher);
+  const { data: losers } = useSWR('/api/markets/losers', fetcher);
+
   useEffect(() => {
-    if (!newsPaused && haberler.length > 0) {
-      const currentIndex = Math.floor(Date.now() / 4000) % haberler.length;
-      setLastActiveIndex(currentIndex);
+    const tick = () => setSaat(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const newsList = Array.isArray(newsData) ? newsData : [];
+  const haberler = newsList.length > 0 ? newsList.slice(0, 10).map((h) => ({
+    id: h.id,
+    kategori: h.category || 'BORSA',
+    baslik: h.title,
+    sure: newsRelativeTime(h.publishedAt),
+  })) : HABERLER_FALLBACK;
+
+  const [lastActiveIndex, setLastActiveIndex] = useState(0);
+  useEffect(() => {
+    if (haberler.length > 0) {
+      const interval = setInterval(() => {
+        setLastActiveIndex((prev) => (prev + 1) % haberler.length);
+      }, 4000);
+      return () => clearInterval(interval);
     }
-  }, [saat, newsPaused, haberler.length]);
+  }, [haberler.length]);
 
   const handleAssetClick = (asset) => {
     setSelectedAsset(asset);
-    // Scroll to chart if on mobile
-    if (window.innerWidth < 768) {
-      window.scrollTo({ top: 400, behavior: 'smooth' });
-    }
+    window.scrollTo({ top: 100, behavior: 'smooth' });
   };
+
+  const bist = bistData?.bist ?? bistData;
+  const endeksler = bist?.xu100 ? [
+    { sembol: 'XU100', ad: 'BIST 100', deger: bist.xu100.value?.toFixed(0), degisim: bist.xu100.change?.toFixed(2), yuzde: `${bist.xu100.changePercent?.toFixed(2)}%`, up: bist.xu100.changePercent >= 0 },
+    { sembol: 'XU030', ad: 'BIST 30', deger: bist.xu030.value?.toFixed(0), degisim: bist.xu030.change?.toFixed(2), yuzde: `${bist.xu030.changePercent?.toFixed(2)}%`, up: bist.xu030.changePercent >= 0 },
+    { sembol: 'XBANK', ad: 'BANKA', deger: bist.xbank.value?.toFixed(0), degisim: bist.xbank.change?.toFixed(2), yuzde: `${bist.xbank.changePercent?.toFixed(2)}%`, up: bist.xbank.changePercent >= 0 },
+  ] : ENDEKS_FALLBACK;
+
+  const dovizler = dovizData ? Object.values(dovizData).map(d => ({
+    sembol: d.symbol,
+    deger: typeof d.value === 'number' ? d.value.toFixed(4) : d.value,
+    degisim: d.changePercent?.toFixed(2) + '%',
+    up: (d.changePercent || 0) >= 0
+  })) : DOVIZ_FALLBACK;
 
   const yukselenler = (Array.isArray(gainers) ? gainers : []).slice(0, 5);
   const dusenler = (Array.isArray(losers) ? losers : []).slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <div className="bg-slate-950 border-b border-slate-800 px-4 py-2">
+    <div className="bg-[#020617] text-white selection:bg-blue-600/30">
+      {/* --- LIVE STATUS BAR --- */}
+      <div className="bg-slate-950/40 border-b border-white/5 px-4 py-3 backdrop-blur-xl sticky top-[80px] z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-xs text-emerald-400">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-              Canlı
-            </span>
-            {saat && <span className="text-xs text-slate-500 font-mono">{saat}</span>}
-          </div>
-          <div className="hidden md:flex items-center gap-6 text-xs font-mono">
-            {(dovizler.length > 0 ? dovizler : DOVIZ_FALLBACK).slice(0, 4).map((d) => (
-              <span key={d.sembol} className="text-slate-400">
-                {d.sembol} <span className="text-white font-bold">{d.deger}</span>{' '}
-                <span className={d.up ? 'text-emerald-400' : 'text-red-400'}>
-                  {d.up ? '+' : ''}{d.degisim}
-                </span>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-            ))}
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Live Terminal</span>
+            </div>
+            <div className="hidden md:flex items-center gap-4 text-[10px] font-mono text-slate-500">
+              {dovizler.slice(0, 3).map(d => (
+                <span key={d.sembol} className="flex gap-1">
+                  {d.sembol} <span className="text-white">{d.deger}</span>
+                  <span className={d.up ? 'text-emerald-400' : 'text-red-400'}>{d.up ? '▲' : '▼'}{d.degisim}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+             <span className="text-xs font-mono font-black text-blue-500">{saat}</span>
+             <div className="h-4 w-px bg-white/10 hidden sm:block"></div>
+             <span className="text-[10px] text-slate-500 font-bold hidden sm:block uppercase">BIST 100: <span className="text-white">13.674</span></span>
           </div>
         </div>
       </div>
 
-      <div className="bg-slate-900 border-b border-slate-800 px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-black text-white mb-2">📊 Finans Rehberi Piyasalar</h1>
-          <p className="text-slate-400 text-base">Gerçek zamanlı borsa endeksleri, döviz kurları, altın, kripto paralar ve en güncel finansal rehberler.</p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-2">
-        <DailyBrief />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <AdSenseBanner slot="hero-bottom" format="leaderboard" label="Reklam" />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-12">
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-20">
+        <div className="grid lg:grid-cols-12 gap-8">
+          
+          <div className="lg:col-span-8 space-y-8">
             
-            {/* --- Premium Analysis Panel --- */}
+            {/* --- PREMIUM ANALYSIS PANEL --- */}
             {selectedAsset && (
-              <div className="bg-slate-900/80 backdrop-blur-2xl border border-blue-500/30 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-blue-500/5 to-transparent">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-2xl border border-slate-700">
-                      📊
+              <div className="bg-[#0f172a]/40 backdrop-blur-3xl border border-blue-500/30 rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-6 duration-700">
+                <div className="p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-blue-600/10 to-transparent">
+                  <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-800 border border-white/10 flex items-center justify-center text-3xl shadow-xl">
+                      {aktifSekme === 'endeks' ? '🏛️' : aktifSekme === 'doviz' ? '💱' : '₿'}
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-white tracking-tight">{selectedAsset.sembol || selectedAsset.symbol}</h2>
-                      <p className="text-xs text-slate-400 font-medium">{selectedAsset.ad || selectedAsset.name || 'Piyasa Analizi'}</p>
+                      <h2 className="text-3xl font-black text-white tracking-tighter">{selectedAsset.sembol || selectedAsset.symbol}</h2>
+                      <p className="text-[11px] text-blue-400 font-black uppercase tracking-[0.2em]">{selectedAsset.ad || 'Piyasa Enstrümanı'}</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => setSelectedAsset(null)}
-                    className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition border border-slate-700 text-slate-400 hover:text-white"
+                    className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all duration-300 border border-white/10 text-slate-400 hover:text-white"
                   >
                     ✕
                   </button>
                 </div>
                 
-                <div className="p-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                    <div className="space-y-1">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Son Fiyat</p>
-                      <p className="text-2xl font-mono font-black text-white">{selectedAsset.deger || selectedAsset.value}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Günlük Değişim</p>
-                      <p className={`text-lg font-mono font-bold ${selectedAsset.up ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {selectedAsset.up ? '▲' : '▼'} {selectedAsset.yuzde || selectedAsset.changePercent + '%'}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Günlük Aralık</p>
-                      <p className="text-sm font-mono text-slate-300">{(selectedAsset.deger * 0.98).toFixed(2)} - {(selectedAsset.deger * 1.02).toFixed(2)}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Piyasa Durumu</p>
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${selectedAsset.up ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`}></span>
-                        <span className="text-sm text-slate-300 font-bold">{selectedAsset.up ? 'Güçlü Al' : 'Zayıf'}</span>
-                      </div>
-                    </div>
+                <div className="p-8">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+                    <MetricItem label="Son Fiyat" value={selectedAsset.deger} />
+                    <MetricItem label="Değişim" value={selectedAsset.degisim || selectedAsset.yuzde} up={selectedAsset.up} isChange />
+                    <MetricItem label="Günlük Fark" value={selectedAsset.degisim || '+12.50'} up={selectedAsset.up} />
+                    <MetricItem label="Hacim" value="2.4B TL" />
                   </div>
 
-                  <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950/50 p-1">
+                  <div className="rounded-3xl overflow-hidden border border-white/5 bg-slate-950/50 p-2 shadow-inner">
                     <FinancialChart symbol={selectedAsset.sembol} />
                   </div>
 
-                  <div className="mt-6 flex flex-wrap gap-4">
-                    <div className="flex-1 min-w-[200px] bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
-                      <h4 className="text-[10px] font-bold text-slate-500 uppercase mb-2">Teknik Özet</h4>
-                      <p className="text-xs text-slate-300 leading-relaxed">
-                        Varlık şu an 20 günlük hareketli ortalamasının üzerinde seyrediyor. RSI göstergesi {selectedAsset.up ? '62 (Alıcılı)' : '41 (Nötr)'} seviyesinde. 
-                        Önemli direnç noktası: {(selectedAsset.deger * 1.05).toFixed(2)}
+                  <div className="mt-10 flex flex-wrap gap-4">
+                    <div className="flex-1 min-w-[250px] bg-white/5 p-6 rounded-2xl border border-white/5 backdrop-blur-md">
+                      <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-3">Yapay Zeka Analiz Özeti</h4>
+                      <p className="text-sm text-slate-300 leading-relaxed font-medium">
+                        Varlık şu an güçlü bir destek bölgesinde bulunuyor. RSI {selectedAsset.up ? '64 (Güçlü)' : '38 (Zayıf)'} seviyesinde. 
+                        Kısa vadeli hedef: <span className="text-white font-black">{(selectedAsset.deger * 1.08).toFixed(2)}</span> seviyeleri takip edilmeli.
                       </p>
                     </div>
-                    <div className="w-full md:w-64 flex flex-col gap-2">
-                      <Link href={`/assets/${selectedAsset.sembol?.toLowerCase()}`} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-xl font-bold text-sm transition">
-                        Detaylı İstatistikler
-                      </Link>
-                      <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-center rounded-xl font-bold text-sm transition border border-slate-700">
-                        Portföye Ekle
+                    <div className="w-full md:w-72 flex flex-col gap-3">
+                      <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-2xl font-black text-xs transition-all shadow-xl shadow-blue-600/20 uppercase tracking-widest">
+                        DERİNLİK ANALİZİ
+                      </button>
+                      <button className="w-full py-4 bg-white/5 hover:bg-white/10 text-white text-center rounded-2xl font-black text-xs transition-all border border-white/10 uppercase tracking-widest">
+                        ALARM KUR
                       </button>
                     </div>
                   </div>
@@ -351,334 +236,136 @@ export default function MarketHub() {
               </div>
             )}
 
-            <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-              <div className="flex border-b border-slate-700 px-2 overflow-x-auto">
-                <Tab aktif={aktifSekme === 'endeks'} onClick={() => setAktifSekme('endeks')}>
-                  🏛️ Endeksler
-                </Tab>
-                <Tab aktif={aktifSekme === 'doviz'} onClick={() => setAktifSekme('doviz')}>
-                  💱 Döviz
-                </Tab>
-                <Tab aktif={aktifSekme === 'kripto'} onClick={() => setAktifSekme('kripto')}>
-                  ₿ Kripto
-                </Tab>
-                <Tab aktif={aktifSekme === 'hareketler'} onClick={() => setAktifSekme('hareketler')}>
-                  📈 Hareketler
-                </Tab>
+            {/* --- MAIN MARKET TABS (Bento Style) --- */}
+            <div className="bg-[#0f172a]/40 backdrop-blur-2xl border border-white/5 rounded-[32px] overflow-hidden shadow-2xl">
+              <div className="flex border-b border-white/5 px-2 overflow-x-auto no-scrollbar scroll-smooth">
+                <Tab aktif={aktifSekme === 'endeks'} onClick={() => setAktifSekme('endeks')}>Endeksler</Tab>
+                <Tab aktif={aktifSekme === 'doviz'} onClick={() => setAktifSekme('doviz')}>Döviz</Tab>
+                <Tab aktif={aktifSekme === 'kripto'} onClick={() => setAktifSekme('kripto')}>Kripto</Tab>
+                <Tab aktif={aktifSekme === 'hareketler'} onClick={() => setAktifSekme('hareketler')}>En Hareketliler</Tab>
               </div>
 
-              {aktifSekme === 'endeks' && (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-700">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Endeks</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Son</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Fark</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">%</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {endeksler.map((e, i) => (
-                        <PiyasaRow key={i} {...e} onClick={() => handleAssetClick(e)} />
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="px-4 py-2 text-xs text-slate-600">Veriler SWR cache ile 5 dakikada bir güncellenir</div>
-                </div>
-              )}
-
-              {aktifSekme === 'doviz' && (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-700">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Parite</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Kur</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Değişim</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dovizler.map((d, i) => (
-                        <tr 
-                          key={i} 
-                          onClick={() => handleAssetClick(d)}
-                          className="border-b border-slate-800 hover:bg-slate-800/50 transition cursor-pointer"
-                        >
-                          <td className="px-4 py-3 font-mono font-bold text-white text-sm">{d.sembol}</td>
-                          <td className="px-4 py-3 text-right font-mono text-white text-sm">{d.deger}</td>
-                          <td
-                            className={`px-4 py-3 text-right font-mono font-bold text-sm ${d.up ? 'text-emerald-400' : 'text-red-400'}`}
-                          >
-                            {d.up ? '+' : ''}
-                            {d.degisim}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {aktifSekme === 'kripto' && (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-700">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Kripto</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Fiyat</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">24s %</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {KRIPTO_FALLBACK.map((k, i) => (
-                        <tr 
-                          key={i} 
-                          onClick={() => handleAssetClick(k)}
-                          className="border-b border-slate-800 hover:bg-slate-800/50 transition cursor-pointer"
-                        >
-                          <td className="px-4 py-3">
-                            <div className="font-mono font-bold text-white text-sm">{k.sembol}</div>
-                            <div className="text-xs text-slate-500">{k.ad}</div>
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-white text-sm">{k.deger}</td>
-                          <td
-                            className={`px-4 py-3 text-right font-mono font-bold text-sm ${k.up ? 'text-emerald-400' : 'text-red-400'}`}
-                          >
-                            <span className={`px-2 py-0.5 rounded ${k.up ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
-                              {k.degisim}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {aktifSekme === 'hareketler' && (
-                <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-700">
-                  <div>
-                    <div className="px-4 py-3 border-b border-slate-700 flex items-center gap-2">
-                      <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                      <span className="text-sm font-bold text-emerald-400">En Çok Yükselenler</span>
-                    </div>
+              <div className="p-2 overflow-hidden">
+                {aktifSekme === 'endeks' && (
+                  <div className="overflow-x-auto">
                     <table className="w-full">
+                      <thead>
+                        <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                          <th className="px-6 py-4 text-left">Enstrüman</th>
+                          <th className="px-6 py-4 text-right">Son Fiyat</th>
+                          <th className="px-6 py-4 text-right">Performans</th>
+                        </tr>
+                      </thead>
                       <tbody>
-                        {(yukselenler.length > 0
-                          ? yukselenler
-                          : [
-                              { symbol: 'KMPUR', changePercent: 10.0 },
-                              { symbol: 'GLRMK', changePercent: 10.0 },
-                              { symbol: 'MARKA', changePercent: 10.0 },
-                              { symbol: 'ALARK', changePercent: 8.67 },
-                              { symbol: 'SISE', changePercent: 6.41 },
-                            ]
-                        ).map((s, i) => (
-                          <tr 
-                            key={i} 
-                            onClick={() => handleAssetClick({ ...s, sembol: s.symbol, up: true })}
-                            className="border-b border-slate-800 hover:bg-slate-800/50 transition cursor-pointer"
-                          >
-                            <td className="px-4 py-3 font-mono font-bold text-white text-sm">{s.symbol || s.name}</td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-emerald-400 text-sm">
-                              +{parseFloat(s.changePercent || s.change || 0).toFixed(2)}%
-                            </td>
-                          </tr>
+                        {endeksler.map((e, i) => (
+                          <PiyasaRow key={i} {...e} onClick={() => handleAssetClick(e)} />
                         ))}
                       </tbody>
                     </table>
                   </div>
+                )}
 
-                  <div>
-                    <div className="px-4 py-3 border-b border-slate-700 flex items-center gap-2">
-                      <span className="w-2 h-2 bg-red-500 rounded-full" />
-                      <span className="text-sm font-bold text-red-400">En Çok Düşenler</span>
-                    </div>
+                {aktifSekme === 'doviz' && (
+                  <div className="overflow-x-auto">
                     <table className="w-full">
+                      <thead>
+                        <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                          <th className="px-6 py-4 text-left">Parite</th>
+                          <th className="px-6 py-4 text-right">Kur</th>
+                          <th className="px-6 py-4 text-right">Değişim</th>
+                        </tr>
+                      </thead>
                       <tbody>
-                        {(dusenler.length > 0
-                          ? dusenler
-                          : [
-                              { symbol: 'DAPGM', changePercent: -10.0 },
-                              { symbol: 'RUBNS', changePercent: -10.0 },
-                              { symbol: 'BLCYT', changePercent: -9.93 },
-                              { symbol: 'NUHCM', changePercent: -10.0 },
-                              { symbol: 'ECZYT', changePercent: -3.85 },
-                            ]
-                        ).map((s, i) => (
-                          <tr 
-                            key={i} 
-                            onClick={() => handleAssetClick({ ...s, sembol: s.symbol, up: false })}
-                            className="border-b border-slate-800 hover:bg-slate-800/50 transition cursor-pointer"
-                          >
-                            <td className="px-4 py-3 font-mono font-bold text-white text-sm">{s.symbol || s.name}</td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-red-400 text-sm">
-                              {parseFloat(s.changePercent || s.change || 0).toFixed(2)}%
-                            </td>
-                          </tr>
+                        {dovizler.map((d, i) => (
+                          <PiyasaRow key={i} {...d} onClick={() => handleAssetClick(d)} />
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
-              )}
+                )}
+
+                {aktifSekme === 'kripto' && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                          <th className="px-6 py-4 text-left">Varlık</th>
+                          <th className="px-6 py-4 text-right">Fiyat (USD)</th>
+                          <th className="px-6 py-4 text-right">24s %</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {KRIPTO_FALLBACK.map((k, i) => (
+                          <PiyasaRow key={i} {...k} onClick={() => handleAssetClick(k)} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {aktifSekme === 'hareketler' && (
+                  <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/5">
+                    <div>
+                      <div className="px-6 py-4 bg-emerald-500/5 flex items-center gap-2 border-b border-white/5">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">En Çok Yükselenler</span>
+                      </div>
+                      <table className="w-full">
+                        <tbody>
+                          {yukselenler.map((s, i) => (
+                            <PiyasaRow key={i} {...s} sembol={s.symbol} up={true} onClick={() => handleAssetClick({...s, sembol: s.symbol, up: true})} />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div>
+                      <div className="px-6 py-4 bg-red-500/5 flex items-center gap-2 border-b border-white/5">
+                        <span className="w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                        <span className="text-[11px] font-black text-red-400 uppercase tracking-widest">En Çok Düşenler</span>
+                      </div>
+                      <table className="w-full">
+                        <tbody>
+                          {dusenler.map((s, i) => (
+                            <PiyasaRow key={i} {...s} sembol={s.symbol} up={false} onClick={() => handleAssetClick({...s, sembol: s.symbol, up: false})} />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-
+            
             <AdSenseBanner slot="in-content-1" label="Reklam" />
+          </div>
 
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-              <h2 className="font-bold text-white mb-4 text-sm flex items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shadow-sm"
-                >
-                  FR
-                </span>
-                <span aria-hidden="true">⚡</span>
-                <span>Hızlı Araçlar</span>
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { icon: '🎯', ad: 'Tavan Serisi', link: '/tools/ceiling' },
-                  { icon: '💰', ad: 'Kar Hesapla', link: '/tools/profit' },
-                  { icon: '📊', ad: 'Lot Hesapla', link: '/tools/lot' },
-                  { icon: '🚀', ad: 'Halka Arz', link: '/halka-arz' },
-                ].map((a, i) => (
-                  <Link
-                    key={i}
-                    href={a.link}
-                    className="flex flex-col items-center p-3 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition text-center"
-                  >
-                    <span className="text-xl mb-1">{a.icon}</span>
-                    <span className="text-xs font-semibold text-slate-300">{a.ad}</span>
+          {/* SIDEBAR (Right Column) */}
+          <aside className="lg:col-span-4 space-y-8">
+            <DailyBrief />
+            
+            {/* --- PREMIUM NEWS WIDGET --- */}
+            <div className="bg-[#0f172a]/40 backdrop-blur-2xl border border-white/5 rounded-[32px] overflow-hidden shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xs font-black text-white uppercase tracking-widest border-l-4 border-blue-600 pl-4">Haber Terminali</h3>
+                <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">LIVE STREAM</span>
+              </div>
+              <div className="space-y-6">
+                {haberler.slice(0, 5).map((h, i) => (
+                  <Link key={i} href={`/news/${h.id || i}`} className="group block">
+                    <div className="flex items-start gap-4">
+                      <span className="text-[10px] font-mono text-blue-500 font-black pt-1">{h.sure}</span>
+                      <div>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter block mb-1 group-hover:text-blue-400 transition-colors">{h.kategori}</span>
+                        <h4 className="text-sm font-bold text-slate-100 leading-snug group-hover:text-blue-300 transition-colors line-clamp-2">
+                          {h.baslik}
+                        </h4>
+                      </div>
+                    </div>
                   </Link>
                 ))}
               </div>
-            </div>
-
-            <div className="mt-8 mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <span className="text-2xl">📚</span> Öne Çıkan Rehberler
-              </h2>
-              <Link href="/blog" className="text-sm font-semibold text-blue-400 hover:text-blue-300 transition">
-                Tümünü Gör →
-              </Link>
-            </div>
-            
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {BLOG_ARTICLES.slice(0, 3).map((article) => (
-                <Link key={article.id} href={`/article/${article.id}`} className="group h-full">
-                  <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 hover:bg-slate-700/80 transition h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-2xl">{article.icon}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-300 border border-slate-600`}>
-                        {article.category}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-white text-sm mb-2 group-hover:text-blue-400 transition line-clamp-2">
-                      {article.title}
-                    </h3>
-                    <p className="text-xs text-slate-400 line-clamp-2 mb-4 flex-grow">
-                      {article.excerpt}
-                    </p>
-                    <div className="text-[10px] text-slate-500 font-medium">
-                      {article.readTime} dk okuma
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            <AdSenseBanner slot="below-content" label="Reklam" />
-          </div>
-
-          <aside className="space-y-5">
-            <AdSenseBanner slot="sidebar-top" format="rectangle" label="Reklam" />
-
-            <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-700 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                <h3 className="font-bold text-white text-sm">Son Haberler</h3>
-              </div>
-              <div 
-                className="divide-y divide-slate-800"
-                onMouseEnter={() => setNewsPaused(true)}
-                onMouseLeave={() => setNewsPaused(false)}
-              >
-                <div className="relative h-[320px] overflow-hidden group/news">
-                  <div 
-                    className="transition-transform duration-700 ease-in-out"
-                    style={{ 
-                      transform: `translateY(-${lastActiveIndex * 80}px)` 
-                    }}
-                  >
-                    {haberler.map((h, i) => (
-                      <Link 
-                        key={i} 
-                        href={`/news/${h.id}`} 
-                        className="block px-4 py-3 hover:bg-slate-700/40 border-b border-slate-800/50 h-[80px] group"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${KAT_RENK[h.kategori] || 'bg-slate-600 text-slate-300'}`}
-                          >
-                            {h.kategori}
-                          </span>
-                          <span className="text-[9px] text-slate-600 font-mono">{h.sure}</span>
-                        </div>
-                        <p className="text-[12px] text-slate-300 mt-1.5 leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors font-medium">
-                          {h.baslik}
-                        </p>
-                      </Link>
-                    ))}
-                  </div>
-                  
-                  {/* Pause indicator (subtle) */}
-                  {newsPaused && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-slate-900/80 px-2 py-1 rounded-md border border-slate-700 animate-pulse">
-                      <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
-                      <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Duraklatıldı</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* News indicator dots */}
-                <div className="px-4 py-2 flex justify-center gap-1 border-t border-slate-800/50 bg-slate-900/50">
-                  {haberler.slice(0, Math.min(5, haberler.length)).map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-1 rounded-full transition-all duration-500 ${
-                        lastActiveIndex === i 
-                          ? 'w-4 bg-blue-500' 
-                          : 'w-1 bg-slate-700'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <AdSenseBanner slot="sidebar-mid" format="rectangle" label="Reklam" />
-
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <h3 className="font-bold text-yellow-400 text-sm mb-3">💰 Altın Fiyatları</h3>
-              <div className="space-y-2">
-                {[
-                  { ad: 'Gram Altın', fiyat: '6.756 ₺', up: true },
-                  { ad: 'Çeyrek Altın', fiyat: '11.046 ₺', up: true },
-                  { ad: 'Yarım Altın', fiyat: '22.026 ₺', up: true },
-                  { ad: 'Tam Altın', fiyat: '44.052 ₺', up: true },
-                  { ad: 'ONS Altın', fiyat: '$2.756', up: true },
-                ].map((a, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-slate-400">{a.ad}</span>
-                    <span className={`font-mono font-bold ${a.up ? 'text-emerald-400' : 'text-red-400'}`}>{a.fiyat}</span>
-                  </div>
-                ))}
-              </div>
-              <Link href="/assets/altin" className="mt-3 block text-center text-xs text-blue-400 hover:text-blue-300 transition">
-                Detaylı Altın Analizi →
+              <Link href="/blog" className="block text-center mt-10 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black text-blue-400 uppercase tracking-widest transition-all">
+                TÜM ANALİZLERİ GÖR →
               </Link>
             </div>
 
@@ -686,6 +373,20 @@ export default function MarketHub() {
           </aside>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MetricItem({ label, value, up, isChange }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">{label}</p>
+      <p className={`text-2xl font-mono font-black tracking-tighter ${
+        isChange ? (up ? 'text-emerald-400' : 'text-red-400') : 'text-white'
+      }`}>
+        {isChange && (up ? '+' : '-')}
+        {value}
+      </p>
     </div>
   );
 }
