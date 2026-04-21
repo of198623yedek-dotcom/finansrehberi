@@ -1,12 +1,5 @@
-// 🆕 AŞAMA 5: API endpoint with Error Handling & Stale Data Fallback
-// Strategy:
-// 1. Try DB (fresh cache)
-// 2. If fails → Use stale data
-// 3. Always return metadata about data source & freshness
-
-import { getAllMarketDataFromDB, getMarketDataFromDB } from '@/lib/supabaseDB';
+import { getAllMarketDataFromDB } from '@/lib/supabaseDB';
 import { getBistIndices, getExchangeRates, getMetalsPrices, getTopGainers, getTopLosers, getFinancialNews } from '@/lib/turk-markets';
-import { getDataWithFallback, DataStalenessWarning } from '@/lib/errorHandling';
 
 const MOCK_DATA = {
   bist: {
@@ -19,34 +12,42 @@ const MOCK_DATA = {
     usd_try: { symbol: 'USD/TRY', value: '44.5007', change: -0.23, changePercent: -0.51 },
     eur_try: { symbol: 'EUR/TRY', value: '52.0308', change: 0.56, changePercent: 1.09 },
   },
-  altın: {
-    gold_usd: { symbol: 'ALTIN/USD', name: 'Altın (USD/ONS)', value: 2450.75, change: 12.50, changePercent: 0.51 },
-    gold_gram: { symbol: 'ALTIN/GRAM', name: 'Gram Altın', value: 78.75, change: 0.40, changePercent: 0.51 },
-  },
 };
 
-export async function GET() {
-  try {
-    // Check if Supabase is configured
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      console.log('⚠️ Supabase not configured, using fallback data');
-      return Response.json({
-        ...MOCK_DATA,
-        gainers: [],
-        losers: [],
-        news: [],
-        timestamp: new Date().toISOString(),
-        source: 'mock-fallback',
-        dataFreshness: 'stale',
-        warning: 'Supabase not configured - using fallback data',
-      });
-    }
+export const dynamic = 'force-dynamic';
 
-    // 1️⃣ Veritabanından veri oku (Cache-first!)
+export async function GET(req) {
+  try {
+    // 1️⃣ Veritabanından veriyi çek
     const dbData = await getAllMarketDataFromDB();
     
+    // Veri tazelik kontrolü (en yeni verinin tarihine bak)
+    let isStale = true;
     if (dbData && dbData.length > 0) {
-      // DB'den veri var, grupla
+      const latestUpdate = new Date(dbData[0].last_updated_at).getTime();
+      const now = Date.now();
+      // 5 dakikadan (300.000 ms) yeni veri varsa tazedir
+      if (now - latestUpdate < 300000) {
+        isStale = false;
+      }
+    }
+
+    // 2️⃣ Eğer veri çok eskiyse veya hiç yoksa, ARKA PLANDA güncelleme tetikle
+    // Not: Bu işlem isteği bekletmez, Vercel Hobby için idealdir.
+    if (isStale) {
+      console.log('🕒 Data is stale, triggering background update...');
+      // Kendi API endpoint'imizi gizli bir şekilde (header ile) tetikliyoruz
+      // fetch'i await etmiyoruz ki kullanıcıyı bekletmesin
+      const protocol = req.headers.get('x-forwarded-proto') || 'http';
+      const host = req.headers.get('host');
+      const updateUrl = `${protocol}://${host}/api/cron/update-markets`;
+      
+      fetch(updateUrl, {
+        headers: { 'Authorization': `Bearer ${process.env.CRON_SECRET}` }
+      }).catch(err => console.error('Background update trigger failed:', err));
+    }
+
+    if (dbData && dbData.length > 0) {
       const bist = {};
       const döviz = {};
       const altın = {};
@@ -82,88 +83,39 @@ export async function GET() {
         }
       }
 
-      // 2️⃣ DB'den başarıyla okumuşuz, cevap döndür
-    return Response.json({
-      bist: Object.keys(bist).length > 0 ? bist : MOCK_DATA.bist,
-      döviz: Object.keys(döviz).length > 0 ? döviz : MOCK_DATA.döviz,
-      altın: Object.keys(altın).length > 0 ? altın : MOCK_DATA.altın,
-      gainers,
-      losers,
-      news,
-      timestamp: new Date().toISOString(),
-      source: 'database', // 🆕 Source metadata
-      dataFreshness: 'cached', // 🆕 Data freshness indicator
-      dataQuality: {  // 🆕 AŞAMA 5
+      return Response.json({
+        bist: Object.keys(bist).length > 0 ? bist : MOCK_DATA.bist,
+        döviz: Object.keys(döviz).length > 0 ? döviz : MOCK_DATA.döviz,
+        altın: Object.keys(altın).length > 0 ? altın : {},
+        gainers,
+        losers,
+        news,
+        timestamp: new Date().toISOString(),
         source: 'database',
-        isStale: false,
-        qualityScore: 100,
-        warning: null,
-      },
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      },
-    });
+        dataFreshness: isStale ? 'stale-revalidating' : 'fresh'
+      });
     }
 
-    // 3️⃣ DB boşsa (first run), API'den çek (Fallback)
-    console.log('⚠️ DB empty, falling back to API calls...');
-    const bist = await getBistIndices().catch(e => {
-      console.error('BIST error:', e);
-      return MOCK_DATA.bist;
-    });
-
-    const döviz = await getExchangeRates().catch(e => {
-      console.error('Döviz error:', e);
-      return MOCK_DATA.döviz;
-    });
-
-    const altın = await getMetalsPrices().catch(e => {
-      console.error('Metals error:', e);
-      return MOCK_DATA.altın;
-    });
-
-    const gainers = await getTopGainers().catch(e => []);
-    const losers = await getTopLosers().catch(e => []);
-    const news = await getFinancialNews().catch(e => []);
+    // 3️⃣ DB boşsa ilk seferlik API'den çek ve döndür (User beklemek zorunda kalır ama sadece 1 kez)
+    const bist = await getBistIndices();
+    const döviz = await getExchangeRates();
+    const altın = await getMetalsPrices();
 
     return Response.json({
       bist,
       döviz,
       altın,
-      gainers,
-      losers,
-      news,
       timestamp: new Date().toISOString(),
-      source: 'api-fallback',
-      dataFreshness: 'realtime',
-      dataQuality: { // 🆕 AŞAMA 5
-        source: 'api-fallback',
-        isStale: false,
-        qualityScore: 90,
-        warning: 'DB boş olduğu için doğrudan API kullanılıyor',
-      },
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
-      },
+      source: 'direct-api-fallback'
     });
+
   } catch (error) {
-    console.error('❌ All markets data error:', error);
+    console.error('❌ API Error:', error);
     return Response.json({
       ...MOCK_DATA,
       timestamp: new Date().toISOString(),
-      error: 'Using fallback data',
       source: 'mock-fallback',
-      dataFreshness: 'stale',
-      dataQuality: { // 🆕 AŞAMA 5
-        source: 'mock-fallback',
-        isStale: true,
-        qualityScore: 0,
-        warning: '❌ KRITIK: Veri alınamadı, lütfen daha sonra tekrar deneyin',
-        severity: 'critical',
-      },
+      error: error.message
     });
   }
 }
-

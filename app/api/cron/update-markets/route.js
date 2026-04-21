@@ -4,13 +4,12 @@
  * 
  * This runs automatically via Vercel Cron:
  * - Every 5 minutes for fast-moving assets (crypto)
- * - Every 15 minutes for slower assets (forex, metals)
  */
 
+import { NextResponse } from 'next/server';
 import {
   upsertMarketData,
   logCronExecution,
-  updateAPICallStats,
   addFailedAssetToQueue,
 } from '@/lib/supabaseDB';
 
@@ -19,7 +18,6 @@ import {
   getExchangeRates,
   getMetalsPrices,
   getCryptoPrices,
-  getNews,
 } from '@/lib/turk-markets';
 
 const ASSETS_TO_UPDATE = [
@@ -30,11 +28,13 @@ const ASSETS_TO_UPDATE = [
 ];
 
 export const maxDuration = 60; // Max 60 seconds for serverless function
+export const dynamic = 'force-dynamic';
 
-export default async function handler(req, res) {
-  // Security: Verify cron token
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
+export async function GET(req) {
+  // Security: Verify cron token or secret
+  const authHeader = req.headers.get('authorization');
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   console.log('🔄 Starting market data update cron job...');
@@ -44,7 +44,6 @@ export default async function handler(req, res) {
     updated: 0,
     failed: 0,
     errors: [],
-    details: [],
   };
 
   try {
@@ -62,12 +61,14 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // Handle different data structures
-        const entries = Array.isArray(data) ? data : Object.entries(data).map(([key, val]) => ({
-          id: key,
-          ...val,
-          category: asset.category,
-        }));
+        // Handle different data structures (array or object)
+        const entries = Array.isArray(data) 
+          ? data 
+          : Object.entries(data).map(([key, val]) => ({
+              id: key,
+              ...val,
+              category: asset.category,
+            }));
 
         for (const entry of entries) {
           try {
@@ -75,28 +76,26 @@ export default async function handler(req, res) {
               name: entry.name || entry.symbol,
               symbol: entry.symbol,
               category: asset.category,
-              value: entry.value,
-              price_usd: entry.price_usd,
-              change: entry.change,
-              changePercent: entry.changePercent,
+              value: entry.value || entry.price_usd,
+              price_usd: entry.price_usd || entry.value,
+              change: entry.change || entry.change_24h,
+              changePercent: entry.changePercent || entry.change_24h,
               market_cap: entry.market_cap,
               volume_24h: entry.volume_24h,
               high: entry.high,
               low: entry.low,
-              source: 'finnhub',
+              source: 'api-sync',
             });
 
             if (success) {
               results.updated++;
-              console.log(`✅ Updated ${entry.id}`);
             } else {
               results.failed++;
-              await addFailedAssetToQueue(entry.id, entry.name, 'Database write failed');
+              await addFailedAssetToQueue(entry.id, entry.name || entry.symbol, 'Database write failed');
             }
           } catch (err) {
             results.failed++;
             results.errors.push(`${entry.id}: ${err.message}`);
-            await addFailedAssetToQueue(entry.id, entry.name, err.message);
           }
         }
       } catch (err) {
@@ -108,7 +107,7 @@ export default async function handler(req, res) {
 
     const duration = Date.now() - startTime;
 
-    // Log execution
+    // Log execution to Supabase
     await logCronExecution('update-markets', 'success', {
       updated: results.updated,
       failed: results.failed,
@@ -116,10 +115,7 @@ export default async function handler(req, res) {
       errors: results.errors,
     });
 
-    console.log(`✅ Cron job completed in ${duration}ms`);
-    console.log(`   Updated: ${results.updated}, Failed: ${results.failed}`);
-
-    return res.status(200).json({
+    return NextResponse.json({
       success: true,
       message: 'Market data updated successfully',
       updated: results.updated,
@@ -132,13 +128,12 @@ export default async function handler(req, res) {
 
     await logCronExecution('update-markets', 'failed', {
       error: err.message,
-      stack: err.stack,
     });
 
-    return res.status(500).json({
+    return NextResponse.json({
       success: false,
       error: err.message,
       timestamp: new Date().toISOString(),
-    });
+    }, { status: 500 });
   }
 }
