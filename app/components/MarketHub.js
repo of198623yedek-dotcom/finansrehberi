@@ -123,6 +123,15 @@ function Tab({ aktif, onClick, children }) {
 export default function MarketHub() {
   const [aktifSekme, setAktifSekme] = useState('endeks');
   const [saat, setSaat] = useState('');
+  const [newsPaused, setNewsPaused] = useState(false);
+  const [lastActiveIndex, setLastActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (!newsPaused) {
+      const currentIndex = Math.floor(Date.now() / 4000) % Math.max(1, haberler.length);
+      setLastActiveIndex(currentIndex);
+    }
+  }, [saat, newsPaused, haberler.length]);
 
   useEffect(() => {
     const tick = () =>
@@ -496,17 +505,23 @@ export default function MarketHub() {
                 <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                 <h3 className="font-bold text-white text-sm">Son Haberler</h3>
               </div>
-              <div className="divide-y divide-slate-800">
-                <div className="relative h-[320px] overflow-hidden">
+              <div 
+                className="divide-y divide-slate-800"
+                onMouseEnter={() => setNewsPaused(true)}
+                onMouseLeave={() => setNewsPaused(false)}
+              >
+                <div className="relative h-[320px] overflow-hidden group/news">
                   <div 
                     className="transition-transform duration-700 ease-in-out"
-                    style={{ transform: `translateY(-${(Math.floor(Date.now() / 4000) % Math.max(1, haberler.length)) * 80}px)` }}
+                    style={{ 
+                      transform: `translateY(-${(newsPaused ? lastActiveIndex : Math.floor(Date.now() / 4000) % Math.max(1, haberler.length)) * 80}px)` 
+                    }}
                   >
                     {haberler.map((h, i) => (
                       <Link 
                         key={i} 
-                        href="/blog" 
-                        className="block px-4 py-3 hover:bg-slate-700/40 border-b border-slate-800/50 h-[80px]"
+                        href={`/news/${h.id}`} 
+                        className="block px-4 py-3 hover:bg-slate-700/40 border-b border-slate-800/50 h-[80px] group"
                       >
                         <div className="flex items-center gap-2">
                           <span
@@ -522,15 +537,23 @@ export default function MarketHub() {
                       </Link>
                     ))}
                   </div>
+                  
+                  {/* Pause indicator (subtle) */}
+                  {newsPaused && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-slate-900/80 px-2 py-1 rounded-md border border-slate-700 animate-pulse">
+                      <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
+                      <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Duraklatıldı</span>
+                    </div>
+                  )}
                 </div>
                 
                 {/* News indicator dots */}
                 <div className="px-4 py-2 flex justify-center gap-1 border-t border-slate-800/50 bg-slate-900/50">
-                  {haberler.slice(0, 5).map((_, i) => (
+                  {haberler.slice(0, Math.min(5, haberler.length)).map((_, i) => (
                     <div 
                       key={i} 
                       className={`h-1 rounded-full transition-all duration-500 ${
-                        (Math.floor(Date.now() / 4000) % Math.max(1, haberler.length)) === i 
+                        (newsPaused ? lastActiveIndex : Math.floor(Date.now() / 4000) % Math.max(1, haberler.length)) === i 
                           ? 'w-4 bg-blue-500' 
                           : 'w-1 bg-slate-700'
                       }`}
