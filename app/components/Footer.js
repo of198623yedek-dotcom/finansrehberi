@@ -27,7 +27,7 @@ export default function Footer() {
                <div className="flex -space-x-2">
                  {[1,2,3].map(i => (
                    <div key={i} className="w-8 h-8 rounded-full border-2 border-[#020617] bg-slate-800 overflow-hidden">
-                     <img src={`https://i.pravatar.cc/100?u=${i+20}`} className="w-full h-full grayscale" />
+                     <img src={`https://i.pravatar.cc/100?u=${i+20}`} className="w-full h-full grayscale" alt="User Avatar" />
                    </div>
                  ))}
                </div>
