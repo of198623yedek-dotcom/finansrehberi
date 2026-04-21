@@ -497,17 +497,46 @@ export default function MarketHub() {
                 <h3 className="font-bold text-white text-sm">Son Haberler</h3>
               </div>
               <div className="divide-y divide-slate-800">
-                {haberler.map((h, i) => (
-                  <Link key={i} href="/blog" className="block px-4 py-3 hover:bg-slate-700/40 transition">
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${KAT_RENK[h.kategori] || 'bg-slate-600 text-slate-300'}`}
-                    >
-                      {h.kategori}
-                    </span>
-                    <p className="text-xs text-slate-300 mt-1.5 leading-snug line-clamp-2">{h.baslik}</p>
-                    <p className="text-[10px] text-slate-600 mt-1">{h.sure}</p>
-                  </Link>
-                ))}
+                <div className="relative h-[320px] overflow-hidden">
+                  <div 
+                    className="transition-transform duration-700 ease-in-out"
+                    style={{ transform: `translateY(-${(Math.floor(Date.now() / 4000) % Math.max(1, haberler.length)) * 80}px)` }}
+                  >
+                    {haberler.map((h, i) => (
+                      <Link 
+                        key={i} 
+                        href="/blog" 
+                        className="block px-4 py-3 hover:bg-slate-700/40 border-b border-slate-800/50 h-[80px]"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${KAT_RENK[h.kategori] || 'bg-slate-600 text-slate-300'}`}
+                          >
+                            {h.kategori}
+                          </span>
+                          <span className="text-[9px] text-slate-600 font-mono">{h.sure}</span>
+                        </div>
+                        <p className="text-[12px] text-slate-300 mt-1.5 leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors font-medium">
+                          {h.baslik}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* News indicator dots */}
+                <div className="px-4 py-2 flex justify-center gap-1 border-t border-slate-800/50 bg-slate-900/50">
+                  {haberler.slice(0, 5).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={`h-1 rounded-full transition-all duration-500 ${
+                        (Math.floor(Date.now() / 4000) % Math.max(1, haberler.length)) === i 
+                          ? 'w-4 bg-blue-500' 
+                          : 'w-1 bg-slate-700'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
 
