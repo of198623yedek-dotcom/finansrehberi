@@ -227,7 +227,13 @@ export default function MarketHub() {
                       <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-2xl font-black text-xs transition-all shadow-xl shadow-blue-600/20 uppercase tracking-widest">
                         DERİNLİK ANALİZİ
                       </button>
-                      <button className="w-full py-4 bg-white/5 hover:bg-white/10 text-white text-center rounded-2xl font-black text-xs transition-all border border-white/10 uppercase tracking-widest">
+                      <Link 
+                        href={`/assets/${(selectedAsset.sembol || selectedAsset.symbol).toLowerCase().replace('/', '-')}`}
+                        className="w-full py-4 bg-white/5 hover:bg-white/10 text-white text-center rounded-2xl font-black text-xs transition-all border border-white/10 uppercase tracking-widest"
+                      >
+                        DETAYLI ANALİZ TERMİNALİ
+                      </Link>
+                      <button className="w-full py-4 bg-white/5 hover:bg-white/10 text-slate-500 hover:text-white text-center rounded-2xl font-black text-[9px] transition-all border border-white/5 uppercase tracking-widest">
                         ALARM KUR
                       </button>
                     </div>

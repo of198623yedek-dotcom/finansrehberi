@@ -1,405 +1,195 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import useSWR from 'swr';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
 import { getAssetBySlug } from '@/lib/assets-data';
-import useCachedAssetData from '@/lib/hooks/useCachedAssetData';
-import { SkeletonAssetPage, LoadingSpinner } from '@/app/components/SkeletonLoaders';
-import generateAssetContent, { generateSEODescription } from '@/lib/contentGenerator';
-import { generateCompleteTrendReport, detectOverboughtOversold } from '@/lib/trendAnalyzer';
-import { FinancialProductSchema, BreadcrumbSchema } from '@/app/components/StructuredData';
-import { DataStalenessWarning, CriticalDataAlert, DataSourceBadge } from '@/app/components/DataStalenessWarning';
-import { AffiliateGrid } from '@/app/components/AffiliateCard';
-import { getAffiliatePartnersByType } from '@/lib/affiliatePartners';
-import { AdvancedAnalytics } from '@/app/components/AdvancedAnalytics';
-import { getMockAnalyticsData } from '@/lib/mockAnalyticsData';
+import { createChart, ColorType } from 'lightweight-charts';
 
-// Helper function
-function formatTime(seconds) {
-  if (!seconds) return 'henüz';
-  if (seconds < 60) return `${seconds} saniye`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} dakika`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} saat`;
-  return `${Math.floor(seconds / 86400)} gün`;
-}
+const fetcher = (url) => fetch(url).then((r) => r.json());
 
-export default function AssetPage({ params }) {
-  const asset = getAssetBySlug(params.asset);
-  
-  const { data: allData, error, isLoading, mutate } = useCachedAssetData(
-    asset?.apiEndpoint || null
+export default function AssetDetail({ params }) {
+  const assetSlug = params.asset;
+  const assetMeta = getAssetBySlug(assetSlug);
+  const [chartContainer, setChartContainer] = useState(null);
+
+  // Veri Çekme (Genel piyasa verisi üzerinden ilgili asset'i ayıklayacağız)
+  const { data: marketData, error, isLoading } = useSWR(
+    assetMeta?.apiEndpoint || '/api/markets/all', 
+    fetcher,
+    { refreshInterval: 30000 }
   );
 
-  const assetData = allData && asset ? allData[asset.dataKey] : null;
+  // Asset verisini ayıkla
+  const assetData = marketData ? (marketData[assetMeta?.dataKey] || marketData[assetSlug]) : null;
 
-  if (!asset) {
+  // Grafik Oluşturma
+  useEffect(() => {
+    if (!chartContainer || !assetData) return;
+
+    const chart = createChart(chartContainer, {
+      layout: {
+        background: { type: ColorType.Solid, color: 'transparent' },
+        textColor: '#94a3b8',
+      },
+      grid: {
+        vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
+        horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
+      },
+      width: chartContainer.clientWidth,
+      height: 400,
+    });
+
+    const lineSeries = chart.addAreaSeries({
+      lineColor: '#3b82f6',
+      topColor: 'rgba(59, 130, 246, 0.2)',
+      bottomColor: 'rgba(59, 130, 246, 0.0)',
+      lineWidth: 2,
+    });
+
+    // Mock geçmiş veri (Gerçek API'nizde varsa onu kullanın)
+    const mockHistory = Array.from({ length: 50 }, (_, i) => ({
+      time: Math.floor(Date.now() / 1000) - (50 - i) * 3600,
+      value: (assetData?.value || 100) * (0.95 + Math.random() * 0.1),
+    }));
+
+    lineSeries.setData(mockHistory);
+    chart.timeScale().fitContent();
+
+    const handleResize = () => chart.applyOptions({ width: chartContainer.clientWidth });
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      chart.remove();
+    };
+  }, [chartContainer, assetData]);
+
+  if (!assetMeta) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 py-12 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Varlık Bulunamadı</h1>
-          <p className="text-gray-400 mb-8">Aradığınız finansal varlık bulunamıştır.</p>
-          <Link href="/market" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg inline-block">
-            Pazar'a Dön
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading && !assetData) {
-    return <SkeletonAssetPage />;
-  }
-
-  if (error && !assetData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* 🆕 AŞAMA 5: Critical Alert */}
-          <CriticalDataAlert
-            title={`${asset.name} Veri Alınamadı`}
-            message={`${asset.name} için piyasa verileri şu anda alınamıyor. Lütfen daha sonra tekrar deneyin.`}
-            onRetry={() => mutate()}
-          />
-          
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => mutate()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition inline-block"
-            >
-              🔄 Yeniden Dene
-            </button>
+      <div className="min-h-screen bg-[#020617] flex flex-col">
+        <Header />
+        <div className="flex-1 flex flex-center justify-center items-center p-10">
+          <div className="text-center">
+            <h1 className="text-4xl font-black text-white mb-4">VARLIK BULUNAMADI</h1>
+            <p className="text-slate-400 mb-8 font-bold">Aradığınız {assetSlug} tanımlı varlık terminal kayıtlarında mevcut değil.</p>
+            <Link href="/market" className="bg-blue-600 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-white shadow-xl shadow-blue-600/20">TERMİNAL'E DÖN</Link>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
-
-  // Content Generator ile dinamik içerik oluştur
-  const generatedContent = generateAssetContent(asset, assetData);
-  const trendReport = generateCompleteTrendReport(asset.name, assetData);
-  const overbought = detectOverboughtOversold(assetData?.changePercent || 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 py-12 px-4 sm:px-6 lg:px-8">
-      {/* JSON-LD Structured Data (SEO) */}
-      {assetData && (
-        <>
-          <FinancialProductSchema asset={asset} priceData={assetData} />
-          <BreadcrumbSchema asset={asset} />
-        </>
-      )}
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-['Inter',sans-serif]">
+      <Header />
 
-      {/* 🆕 AŞAMA 5: Staleness Warning Banner */}
-      {assetData && (
-        <DataStalenessWarning
-          staleSinceSeconds={assetData.staleSinceSeconds || 0}
-          qualityScore={generatedContent.raw?.qualityScore || 100}
-          message={
-            assetData.isStale
-              ? `⚠️ Veriler ${formatTime(assetData.staleSinceSeconds)} önce güncellenmiştir`
-              : null
-          }
-        />
-      )}
-
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 mb-8 border border-white/20">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-4xl font-bold text-white">{asset.name}</h1>
-                <span className="bg-blue-600/30 text-blue-200 px-3 py-1 rounded-full text-sm font-semibold">
-                  {asset.category}
-                </span>
-              </div>
-              <p className="text-xl text-gray-400">{asset.symbol}</p>
+      <main className="max-w-7xl mx-auto px-4 py-12 pt-28">
+        
+        {/* --- ASSET HEADER --- */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-12">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                {assetMeta.category} Terminali
+              </span>
+              <span className="flex items-center gap-1.5 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                CANLI VERİ
+              </span>
             </div>
-            <Link
-              href="/market"
-              className="text-gray-400 hover:text-white transition text-sm"
-            >
-              ← Geri
-            </Link>
+            <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-2">{assetMeta.name}</h1>
+            <p className="text-slate-500 font-mono text-xl font-bold">{assetMeta.symbol}</p>
           </div>
 
-          <p className="text-gray-200 text-base leading-relaxed">
-            {asset.description}
-          </p>
-        </div>
-
-        {/* 🆕 TREND BADGE - SEO Keywords İçeriyor */}
-        {generatedContent.trendBadge && (
-          <div className="mb-8 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-400/30 rounded-xl p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="text-4xl">{generatedContent.trendBadge.emoji}</div>
-              <div>
-                <p className="text-blue-300 text-sm font-semibold uppercase">Bugünün Trendi</p>
-                <p className="text-2xl font-bold text-white">{generatedContent.trendBadge.text}</p>
-              </div>
+          <div className="flex flex-col items-end">
+            <div className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-2">
+              {isLoading ? '---' : assetData?.value?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
             </div>
-            
-            {/* 🆕 AI-Generated Headline (SEO optimized) */}
-            <p className="text-white/90 text-lg font-semibold mb-2">{generatedContent.headline}</p>
-            <p className="text-gray-300 text-sm">{generatedContent.shortDescription}</p>
-          </div>
-        )}
-
-        {/* Real-time Data */}
-        {assetData ? (
-          <>
-            {/* Price Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {/* Current Price */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 transition-all hover:border-blue-400/50">
-                <p className="text-gray-400 text-sm mb-2">Canlı Fiyat</p>
-                <p className="text-3xl font-bold text-white">
-                  {typeof assetData.value === 'number'
-                    ? assetData.value.toLocaleString('tr-TR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 4,
-                      })
-                    : assetData.value}
-                </p>
-                {assetData.price_usd && (
-                  <p className="text-gray-500 text-sm mt-2">
-                    ${assetData.price_usd.toLocaleString('tr-TR')}
-                  </p>
-                )}
-              </div>
-
-              {/* Change */}
-              {assetData.change !== undefined && (
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 transition-all hover:border-green-400/50">
-                  <p className="text-gray-400 text-sm mb-2">24 Saat Değişim</p>
-                  <p
-                    className={`text-3xl font-bold ${
-                      assetData.changePercent >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}
-                  >
-                    {assetData.changePercent >= 0 ? '+' : ''}
-                    {assetData.changePercent?.toFixed(2) || assetData.change?.toFixed(2)}%
-                  </p>
-                  <p className="text-gray-500 text-sm mt-2">
-                    {assetData.change >= 0 ? '↑' : '↓'} {Math.abs(assetData.change).toFixed(2)}
-                  </p>
-                </div>
-              )}
-
-              {/* Market Cap */}
-              {assetData.market_cap && (
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 transition-all hover:border-purple-400/50">
-                  <p className="text-gray-400 text-sm mb-2">Pazar Değeri</p>
-                  <p className="text-3xl font-bold text-white">
-                    $
-                    {(assetData.market_cap / 1e9).toLocaleString('tr-TR', {
-                      maximumFractionDigits: 1,
-                    })}
-                    B
-                  </p>
-                  <p className="text-gray-500 text-sm mt-2">Milyar USD</p>
-                </div>
-              )}
-            </div>
-
-            {/* 🆕 Overbought/Oversold Alert */}
-            {overbought && (
-              <div className={`mb-8 p-4 rounded-lg border-l-4 ${
-                overbought.level > 60 
-                  ? 'bg-yellow-500/10 border-yellow-500 text-yellow-200'
-                  : 'bg-green-500/10 border-green-500 text-green-200'
-              }`}>
-                <p className="font-semibold">
-                  {overbought.emoji} {overbought.condition}
-                </p>
-                <p className="text-sm mt-1">{overbought.advice}</p>
-              </div>
-            )}
-
-            {/* Detailed Info Table */}
-            <div className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden border border-white/20 mb-8">
-              <table className="w-full">
-                <tbody>
-                  {Object.entries(assetData).map(([key, value]) => {
-                    if (
-                      key === 'timestamp' ||
-                      key === 'symbol' ||
-                      key === 'name' ||
-                      key === 'value' ||
-                      key === 'change' ||
-                      key === 'changePercent' ||
-                      key === 'market_cap'
-                    )
-                      return null;
-
-                    const label = key
-                      .replace(/_/g, ' ')
-                      .split(' ')
-                      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-                      .join(' ');
-
-                    return (
-                      <tr key={key} className="border-t border-white/10 hover:bg-white/5 transition">
-                        <td className="px-6 py-4 text-gray-400 text-sm font-medium">{label}</td>
-                        <td className="px-6 py-4 text-white font-semibold">
-                          {typeof value === 'number'
-                            ? value.toLocaleString('tr-TR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 4,
-                              })
-                            : String(value)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : (
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 text-center">
-            <LoadingSpinner />
-            <p className="text-gray-400 mt-4">Veriler yükleniyor...</p>
-          </div>
-        )}
-
-        {/* 🆕 Long Description Section - SEO BOOST */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-6">📖 Detaylı Analiz & Bilgi</h2>
-          <div className="prose prose-invert max-w-none">
-            <p className="text-gray-200 leading-relaxed whitespace-pre-line mb-6">
-              {asset.longDescription}
-            </p>
-          </div>
-
-          {/* 🆕 SEO Keywords Section */}
-          <div className="mt-8 p-4 bg-blue-500/10 rounded-lg border border-blue-400/30">
-            <p className="text-xs text-blue-300 uppercase font-semibold mb-3">📌 İlgili Arama Terimleri</p>
-            <div className="flex flex-wrap gap-2">
-              {generatedContent.keywords.slice(0, 8).map((keyword, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 bg-blue-600/30 text-blue-200 rounded-full text-xs font-medium hover:bg-blue-600/50 transition cursor-pointer"
-                >
-                  {keyword}
-                </span>
-              ))}
+            <div className={`text-xl font-black flex items-center gap-2 ${assetData?.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {assetData?.changePercent >= 0 ? '▲' : '▼'} 
+              %{Math.abs(assetData?.changePercent || 0).toFixed(2)}
+              <span className="text-xs text-slate-500 uppercase tracking-widest ml-2">BUGÜN</span>
             </div>
           </div>
         </div>
 
-        {/* 🆕 Trend Analysis Summary */}
-        {assetData && trendReport.summary && (
-          <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-2xl p-8 border border-purple-400/30 mb-8">
-            <h3 className="text-xl font-bold text-white mb-4">📊 Teknik Analiz Özeti</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <p className="text-purple-300 text-sm uppercase font-semibold mb-2">Trend Durumu</p>
-                <p className="text-2xl font-bold text-white">{trendReport.summary.headline}</p>
+        {/* --- MAIN GRID --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Chart Section */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-slate-950/40 backdrop-blur-2xl border border-white/5 rounded-[32px] p-8 shadow-2xl">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Fiyat Analiz Grafiği</h3>
+                <div className="flex gap-2">
+                  {['1S', '1G', '1H', '1A'].map(t => (
+                    <button key={t} className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-slate-400 hover:text-white hover:bg-blue-600 transition-all">{t}</button>
+                  ))}
+                </div>
               </div>
-              
-              <div>
-                <p className="text-purple-300 text-sm uppercase font-semibold mb-2">Analiz</p>
-                <p className="text-white">{trendReport.summary.analysis}</p>
-              </div>
+              <div ref={setChartContainer} className="w-full h-[400px]" />
             </div>
 
-            <div className="mt-4 p-3 bg-white/10 rounded-lg">
-              <p className="text-gray-300 text-sm">
-                <span className="font-semibold">💡 Tavsiye:</span> {trendReport.summary.recommendation}
+            {/* Description Bento */}
+            <div className="bg-white/5 border border-white/5 rounded-[32px] p-10">
+              <h3 className="text-xl font-black text-white mb-6 uppercase tracking-widest border-l-4 border-blue-600 pl-6">Varlık Hakkında</h3>
+              <p className="text-slate-400 text-sm leading-relaxed font-medium mb-8">
+                {assetMeta.description}
               </p>
+              <div className="prose prose-invert prose-sm max-w-none text-slate-500 italic">
+                {assetMeta.longDescription}
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Related Assets */}
-        {asset.relatedAssets && asset.relatedAssets.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 mb-8">
-            <h3 className="text-xl font-bold text-white mb-6">🔗 İlgili Varlıklar</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {asset.relatedAssets.map((relatedSlug) => {
-                const relatedAsset = getAssetBySlug(relatedSlug);
-                return relatedAsset ? (
-                  <Link
-                    key={relatedSlug}
-                    href={`/assets/${relatedSlug}`}
-                    className="bg-blue-600/20 hover:bg-blue-600/40 border border-blue-400/30 rounded-lg p-4 transition group"
-                  >
-                    <p className="text-blue-300 group-hover:text-blue-200 font-semibold mb-1">
-                      {relatedAsset.name}
-                    </p>
-                    <p className="text-gray-400 text-sm">{relatedAsset.symbol}</p>
-                  </Link>
-                ) : null;
-              })}
+          {/* Sidebar Section */}
+          <div className="space-y-8">
+            {/* Stats Table */}
+            <div className="bg-slate-950/40 backdrop-blur-2xl border border-white/5 rounded-[32px] p-8 shadow-2xl">
+              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] mb-8">Teknik Detaylar</h3>
+              <div className="space-y-6">
+                <StatRow label="Günlük En Düşük" value={assetData?.low || '---'} />
+                <StatRow label="Günlük En Yüksek" value={assetData?.high || '---'} />
+                <StatRow label="Hacim (24S)" value={assetData?.volume || '---'} />
+                <StatRow label="Pazar Değeri" value={assetData?.market_cap ? `${(assetData.market_cap / 1e9).toFixed(1)}B USD` : '---'} />
+                <StatRow label="F/K Oranı" value={assetData?.pe_ratio || 'N/A'} />
+              </div>
+            </div>
+
+            {/* Related News */}
+            <div className="bg-white/5 rounded-[32px] p-8 border border-white/5">
+              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] mb-6">İlgili Haberler</h3>
+              <div className="space-y-6">
+                 {[1, 2, 3].map(i => (
+                   <div key={i} className="group cursor-pointer">
+                      <div className="text-[10px] text-blue-500 font-black mb-1">ANALİZ • 2S ÖNCE</div>
+                      <p className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors leading-relaxed">
+                        {assetMeta.name} için kritik seviyeler: Analistler ne bekliyor?
+                      </p>
+                   </div>
+                 ))}
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Refresh Info */}
-        {assetData && (
-          <div className="mt-8 text-center">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              {/* 🆕 Data Source Badge */}
-              <DataSourceBadge 
-                source={assetData.isStale ? 'stale-data' : 'api'} 
-                isStale={assetData.isStale}
-              />
-            </div>
-            <p className="text-gray-500 text-xs">
-              ✓ Veriler SWR ile cache'leniyor (5 dakikada güncellenir) |
-              <button
-                onClick={() => mutate()}
-                className="text-blue-400 hover:text-blue-300 ml-2 transition"
-              >
-                Şimdi Güncelle
-              </button>
-            </p>
-          </div>
-        )}
-
-        {/* 🆕 AŞAMA 8: Affiliate Partners */}
-        {assetData && asset && (
-          <>
-            {asset.slug === 'bitcoin' || asset.slug === 'ethereum' ? (
-              <AffiliateGrid 
-                partners={getAffiliatePartnersByType('crypto')}
-                title="🪙 Kripto Para Satın Al"
-              />
-            ) : asset.slug === 'altin' ? (
-              <AffiliateGrid 
-                partners={getAffiliatePartnersByType('gold')}
-                title="💰 Altın Yatırım Platformları"
-              />
-            ) : null}
-            
-            <AffiliateGrid 
-              partners={getAffiliatePartnersByType('general')}
-              title="📈 Genel Yatırım Platformları"
-            />
-          </>
-        )}
-
-        {/* 🆕 STRATEGY #2: Advanced Analytics */}
-        {asset && (
-          <div className="mt-12 bg-slate-900/50 rounded-xl p-8 border border-slate-700/50">
-            <AdvancedAnalytics 
-              asset={asset.name}
-              data={getMockAnalyticsData(asset.slug)}
-            />
-          </div>
-        )}
-
-        {/* Legal Notice */}
-        <div className="mt-12 text-center text-gray-500 text-sm border-t border-white/10 pt-6">
-          <p>
-            ⚠️ <Link href="/disclaimer" className="text-red-400 hover:text-red-300">
-              Disclaimer
-            </Link>{' '}
-            - Bu veriler eğitim amaçlıdır. Yatırım kararlarında bunu temel almayın.
-          </p>
         </div>
-      </div>
+
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+function StatRow({ label, value }) {
+  return (
+    <div className="flex justify-between items-center py-4 border-b border-white/5 last:border-0">
+      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+      <span className="text-sm font-black text-white tracking-tighter">{value}</span>
     </div>
   );
 }
