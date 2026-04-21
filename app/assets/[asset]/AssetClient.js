@@ -19,7 +19,13 @@ export default function AssetClient({ assetMeta, assetSlug }) {
     { refreshInterval: 30000 }
   );
 
-  const assetData = marketData ? (marketData[assetMeta?.dataKey] || marketData[assetSlug]) : null;
+  const assetData = marketData ? (
+    marketData[assetMeta?.dataKey] || 
+    marketData[assetSlug] || 
+    marketData[assetSlug.toUpperCase()] || 
+    marketData[assetSlug.replace('-', '/').toUpperCase()] ||
+    Object.values(marketData).find(v => v?.symbol === assetMeta?.symbol)
+  ) : null;
 
   // Grafik Oluşturma (Sadece tarayıcıda çalışır)
   useEffect(() => {
