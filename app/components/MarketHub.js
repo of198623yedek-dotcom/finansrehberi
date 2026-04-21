@@ -514,7 +514,7 @@ export default function MarketHub() {
                   <div 
                     className="transition-transform duration-700 ease-in-out"
                     style={{ 
-                      transform: `translateY(-${(newsPaused ? lastActiveIndex : Math.floor(Date.now() / 4000) % Math.max(1, haberler.length)) * 80}px)` 
+                      transform: `translateY(-${lastActiveIndex * 80}px)` 
                     }}
                   >
                     {haberler.map((h, i) => (
@@ -553,7 +553,7 @@ export default function MarketHub() {
                     <div 
                       key={i} 
                       className={`h-1 rounded-full transition-all duration-500 ${
-                        (newsPaused ? lastActiveIndex : Math.floor(Date.now() / 4000) % Math.max(1, haberler.length)) === i 
+                        lastActiveIndex === i 
                           ? 'w-4 bg-blue-500' 
                           : 'w-1 bg-slate-700'
                       }`}
