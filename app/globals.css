@@ -1,16 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --color-bg: #FFFFFF;
-  --color-text: #000000;
-  --color-text-secondary: #666666;
-  --color-border: #F0F0F0;
-  --color-success: #00AA00;
-  --color-error: #DD0000;
+  /* Core colors */
+  --color-bg: #0f172a;
+  --color-primary: #0f172a;
+  --color-secondary: #1e293b;
+  --color-tertiary: #1e293b;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+
+  /* Accent */
+  --color-accent: #6366f1;
+  --color-accent-hover: #818cf8;
+
+  /* Status */
+  --color-success: #10b981;
+  --color-error: #ef4444;
 }
 
 * {

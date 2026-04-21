@@ -76,6 +76,25 @@ export default function Header() {
               </div>
             </div>
             
+            {/* Dropdown: Araçlar */}
+            <div className="relative group">
+              <button className="text-slate-300 hover:text-white font-medium transition relative">
+                Araçlar ↓
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></span>
+              </button>
+              <div className="absolute left-0 mt-2 w-52 bg-slate-800/95 backdrop-blur border border-slate-700 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl">
+                <Link href="/tools/ceiling" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white font-medium">
+                  🎯 Tavan Serisi
+                </Link>
+                <Link href="/tools/profit" className="block px-4 py-3 hover:bg-blue-600/20 border-b border-slate-700/50 text-slate-300 hover:text-white">
+                  💰 Kar Hesapla
+                </Link>
+                <Link href="/tools/lot" className="block px-4 py-3 hover:bg-blue-600/20 text-slate-300 hover:text-white">
+                  📊 Lot Hesapla
+                </Link>
+              </div>
+            </div>
+
             <Link 
               href="/blog" 
               className="text-slate-300 hover:text-white font-medium transition relative group"
@@ -166,6 +185,14 @@ export default function Header() {
                 <Link href="/assets/bist-100" className="block text-slate-300 hover:text-white text-sm">
                   📊 BIST 100
                 </Link>
+              </div>
+            </div>
+            <div className="px-4">
+              <p className="text-slate-400 text-sm font-semibold mb-2">Araçlar</p>
+              <div className="space-y-2 ml-4">
+                <Link href="/tools/ceiling" className="block text-slate-300 hover:text-white text-sm">🎯 Tavan Serisi</Link>
+                <Link href="/tools/profit" className="block text-slate-300 hover:text-white text-sm">💰 Kar Hesapla</Link>
+                <Link href="/tools/lot" className="block text-slate-300 hover:text-white text-sm">📊 Lot Hesapla</Link>
               </div>
             </div>
             <Link 

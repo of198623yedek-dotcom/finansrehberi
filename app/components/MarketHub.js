@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import AdSenseBanner from '@/app/components/AdSenseBanner';
 import DailyBrief from '@/app/components/DailyBrief';
+import { BLOG_ARTICLES } from '@/lib/blog-data';
 
 const fetcher = (url) =>
   fetch(url).then((r) => {
@@ -231,20 +232,22 @@ export default function MarketHub() {
             {saat && <span className="text-xs text-slate-500 font-mono">{saat}</span>}
           </div>
           <div className="hidden md:flex items-center gap-6 text-xs font-mono">
-            {DOVIZ_FALLBACK.slice(0, 4).map((d) => (
+            {(dovizler.length > 0 ? dovizler : DOVIZ_FALLBACK).slice(0, 4).map((d) => (
               <span key={d.sembol} className="text-slate-400">
                 {d.sembol} <span className="text-white font-bold">{d.deger}</span>{' '}
-                <span className={d.up ? 'text-emerald-400' : 'text-red-400'}>{d.degisim}</span>
+                <span className={d.up ? 'text-emerald-400' : 'text-red-400'}>
+                  {d.up ? '+' : ''}{d.degisim}
+                </span>
               </span>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="bg-slate-900 border-b border-slate-800 px-4 py-5">
+      <div className="bg-slate-900 border-b border-slate-800 px-4 py-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-black text-white mb-1">📊 Piyasa Merkezi</h1>
-          <p className="text-slate-400 text-sm">Borsa endeksleri, döviz, altın ve kripto canlı takip</p>
+          <h1 className="text-3xl md:text-4xl font-black text-white mb-2">📊 Finans Rehberi Piyasalar</h1>
+          <p className="text-slate-400 text-base">Gerçek zamanlı borsa endeksleri, döviz kurları, altın, kripto paralar ve en güncel finansal rehberler.</p>
         </div>
       </div>
 
@@ -447,6 +450,39 @@ export default function MarketHub() {
                   </Link>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-8 mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">📚</span> Öne Çıkan Rehberler
+              </h2>
+              <Link href="/blog" className="text-sm font-semibold text-blue-400 hover:text-blue-300 transition">
+                Tümünü Gör →
+              </Link>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {BLOG_ARTICLES.slice(0, 3).map((article) => (
+                <Link key={article.id} href={`/article/${article.id}`} className="group h-full">
+                  <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 hover:bg-slate-700/80 transition h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-2xl">{article.icon}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-300 border border-slate-600`}>
+                        {article.category}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-white text-sm mb-2 group-hover:text-blue-400 transition line-clamp-2">
+                      {article.title}
+                    </h3>
+                    <p className="text-xs text-slate-400 line-clamp-2 mb-4 flex-grow">
+                      {article.excerpt}
+                    </p>
+                    <div className="text-[10px] text-slate-500 font-medium">
+                      {article.readTime} dk okuma
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
 
             <AdSenseBanner slot="below-content" label="Reklam" />
