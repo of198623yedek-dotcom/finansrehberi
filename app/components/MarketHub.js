@@ -123,15 +123,6 @@ function Tab({ aktif, onClick, children }) {
 export default function MarketHub() {
   const [aktifSekme, setAktifSekme] = useState('endeks');
   const [saat, setSaat] = useState('');
-  const [newsPaused, setNewsPaused] = useState(false);
-  const [lastActiveIndex, setLastActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (!newsPaused) {
-      const currentIndex = Math.floor(Date.now() / 4000) % Math.max(1, haberler.length);
-      setLastActiveIndex(currentIndex);
-    }
-  }, [saat, newsPaused, haberler.length]);
 
   useEffect(() => {
     const tick = () =>
@@ -219,12 +210,24 @@ export default function MarketHub() {
   const newsList = Array.isArray(newsData) ? newsData : [];
   const haberler =
     newsList.length > 0
-      ? newsList.slice(0, 6).map((h) => ({
+      ? newsList.slice(0, 10).map((h) => ({
+          id: h.id,
           kategori: h.category || 'BORSA',
           baslik: h.title,
           sure: newsRelativeTime(h.publishedAt),
         }))
       : HABERLER_FALLBACK;
+
+  // States moved here to avoid Temporal Dead Zone (TDZ)
+  const [newsPaused, setNewsPaused] = useState(false);
+  const [lastActiveIndex, setLastActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (!newsPaused && haberler.length > 0) {
+      const currentIndex = Math.floor(Date.now() / 4000) % haberler.length;
+      setLastActiveIndex(currentIndex);
+    }
+  }, [saat, newsPaused, haberler.length]);
 
   const yukselenler = (Array.isArray(gainers) ? gainers : []).slice(0, 5);
   const dusenler = (Array.isArray(losers) ? losers : []).slice(0, 5);
