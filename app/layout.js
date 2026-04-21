@@ -71,6 +71,7 @@ export default function RootLayout({ children }) {
         <link rel="icon" href="/favicon.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
         {/* ── Google AdSense ──────────────────────────────────────────────────
             ADIM 1: ca-pub-XXXXXXXXXXXXXXXX → kendi Publisher ID'nle değiştir
@@ -103,7 +104,7 @@ export default function RootLayout({ children }) {
           </>
         )}
       </head>
-      <body className="bg-slate-900 text-slate-100 antialiased">
+      <body className="bg-[#020617] text-slate-100 antialiased font-['Inter',sans-serif]">
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
